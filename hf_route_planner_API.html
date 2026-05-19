@@ -384,10 +384,10 @@ async function fetchGameData() {
   const aMax  = parseFloat(params.get('a_max'))  || null;
   const limit = parseInt(params.get('limit'))    || 50;
 
-  // Sestavení filtru pro Supabase
+  // Sestavení filtru pro Supabase (sloupec a_au, PostgREST syntax)
   let filter = `select=*&order=id&limit=${limit}`;
-  if (aMin !== null) filter += `&a_min=gte.${aMin}`;
-  if (aMax !== null) filter += `&a_max=lte.${aMax}`;
+  if (aMin !== null) filter += `&a_au=gte.${aMin}`;
+  if (aMax !== null) filter += `&a_au=lte.${aMax}`;
 
   const [r1, r2, r3] = await Promise.all([
     fetch(`${SB_URL}/rest/v1/asteroids?${filter}`,     { headers: SB_HDR }),
