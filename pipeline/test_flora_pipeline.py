@@ -22,7 +22,6 @@ from fetch_flora import (
     build_tier2,
     build_tier3,
     diameter_from_H,
-    _synthetic_flora,
 )
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -70,19 +69,31 @@ class TestDiameterFormula:
 
 class TestTier1Values:
     def test_H_range(self, asteroids):
+        # Flora family spans H≈6 (Flora itself, D≈150km) to H≈20+ (sub-km)
         for a in asteroids:
             H = _t1(a)["H_magnitude"]
-            assert 8 <= H <= 22, f"Unphysical H={H}"
+            assert 3 <= H <= 25, f"Unphysical H={H}"
 
     def test_albedo_range(self, asteroids):
+        # Only check generated albedos — WISE-measured values are ground truth
+        # and may lie outside our model range (e.g. high-albedo S outliers)
         for a in asteroids:
+            if _t1(a).get("albedo_source") != "generated":
+                continue
             pv   = _t1(a)["albedo_pv"]
             spec = _t1(a)["spectral_class"]
             lo, hi = ALBEDO_RANGE[spec]
-            # generated albedos sampled from [lo,hi]; allow ±0.02 for numeric noise
             assert lo - 0.02 <= pv <= hi + 0.02, (
-                f"{spec} albedo={pv} outside [{lo},{hi}]"
+                f"{spec} generated albedo={pv} outside model range [{lo},{hi}]"
             )
+
+    def test_wise_albedo_physically_plausible(self, asteroids):
+        """WISE-measured albedos must be in general physical bounds (0.01–0.99)."""
+        for a in asteroids:
+            if _t1(a).get("albedo_source") != "WISE":
+                continue
+            pv = _t1(a)["albedo_pv"]
+            assert 0.01 <= pv <= 0.99, f"WISE albedo {pv} physically impossible"
 
     def test_diameter_positive_and_reasonable(self, asteroids):
         for a in asteroids:
@@ -494,7 +505,14 @@ class TestDataIntegrity:
             assert r1["tier3"]["composition"] == r2["tier3"]["composition"]
 
     def test_different_seeds_differ(self):
+        # Tier 1 is dominated by real measurements (WISE albedos are fixed per body),
+        # so we check Tier 3 composition which is always generated stochastically.
         a1 = run_pipeline(limit=20, seed=1)
         a2 = run_pipeline(limit=20, seed=2)
-        same = sum(1 for r1, r2 in zip(a1, a2) if r1["tier1"] == r2["tier1"])
-        assert same < 5, "Different seeds produce too-similar output"
+        same_t3 = sum(
+            1 for r1, r2 in zip(a1, a2)
+            if r1["tier3"]["composition"] == r2["tier3"]["composition"]
+        )
+        assert same_t3 < 5, (
+            f"Different seeds produce identical Tier 3 compositions ({same_t3}/20)"
+        )

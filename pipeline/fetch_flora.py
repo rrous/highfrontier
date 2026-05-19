@@ -17,10 +17,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import random
 import time
 from pathlib import Path
 from typing import Optional
+
+CACHE_DIR = Path(__file__).parent / ".data_cache"
+CACHE_DIR.mkdir(exist_ok=True)
 
 import numpy as np
 import pandas as pd
@@ -31,20 +33,24 @@ log = logging.getLogger(__name__)
 
 # ── constants ────────────────────────────────────────────────────────────────
 
-FLORA_FAMILY_ID = 402          # Nesvorný 2015 PDS ID for Flora family
 SBDB_API = "https://ssd-api.jpl.nasa.gov/sbdb_query.api"
-WISE_MPC_URL = (
-    "https://minorplanetcenter.net/Extended_Files/extended_mpc_ep.json.gz"
+
+# Nesvorný 2015 v3.0 — Flora family #402, fixed-width ASCII table
+# Columns (START_BYTE, BYTES): AST_NUMBER(1,6) A_PROP(8,7) E_PROP(16,8)
+#   SIN_I_PROP(25,8) ABS_MAG(34,5) C_PARAM(40,8) FAMILY_NUMBER(49,3) FAMILY_NAME(53,18)
+NESVORY_URL = (
+    "https://sbnarchive.psi.edu/pds3/non_mission/"
+    "EAR_A_VARGBDET_5_NESVORNYFAM_V3_0/data/families/402_flora.tab"
 )
-# Masiero WISE albedo table — PDS Small Bodies Node
-WISE_PDS_URL = (
-    "https://sbnarchive.psi.edu/pds4/non_mission/gbo.ast.wise.survey/data/"
-    "neowise_diam_albedo.csv"
-)
-# Nesvorný 2015 family list on PDS
-NESVORY_PDS_URL = (
-    "https://sbnarchive.psi.edu/pds3/non_mission/EAR_A_VARGBDET_5_NESVORNYFAM_V3_0/"
-    "data/families/flora_family.tab"
+
+# WISE/NEOWISE main-belt diameters & albedos (Masiero et al. 2011–2015)
+# CSV: ASTEROID_NUMBER, PROV_DESIG, MPC_PACKED_NAME, ABSOLUTE_MAG, SLOPE_PARAM,
+#      MEAN_JD, N_W1..N_W4, FIT_CODE, DIAMETER, DIAMETER_ERR,
+#      V_ALBEDO, V_ALBEDO_ERR, IR_ALBEDO, IR_ALBEDO_ERR,
+#      BEAMING_PARAM, BEAMING_PARAM_ERR, STACKED_FLAG, REFERENCE
+WISE_URL = (
+    "https://sbnarchive.psi.edu/pds3/non_mission/"
+    "EAR_A_COMPIL_5_NEOWISEDIAM_V1_0/data/neowise_mainbelt.tab"
 )
 
 # spectral class distribution for Flora region (DeMeo & Carry 2013 + Nesvorný 2015)
@@ -96,106 +102,128 @@ ROT_LOG_STD  = 0.6
 
 def fetch_nesvory_members(limit: Optional[int] = None) -> pd.DataFrame:
     """
-    Download Flora family membership from JPL SBDB query API.
-    Returns DataFrame with columns: number, name, H, a, e, inc, q, Q
-    """
-    log.info("Fetching Flora family members from JPL SBDB …")
+    Download Flora family members from Nesvorný 2015 PDS catalog (402_flora.tab).
 
-    # SBDB query: filter by family flag. Flora = family #402
-    # We use the fields available in SBDB small body query
-    params = {
-        "fields": "spkid,full_name,H,a,e,i,q,Q,class,diameter,albedo",
-        "sb-cdata": json.dumps({
-            "AND": [
-                ["class", "=", "MBA"],
-                ["a", ">", "2.15"],
-                ["a", "<", "2.40"],
-                ["e", "<", "0.20"],
-                ["i", "<", "10.0"],
-            ]
-        }),
-        "full-prec": "false",
-    }
+    Fixed-width format (bytes, 1-based):
+      1–6   AST_NUMBER   asteroid number
+      8–14  A_PROP       proper semi-major axis [AU]
+      16–23 E_PROP       proper eccentricity
+      25–32 SIN_I_PROP   sin(proper inclination)
+      34–38 ABS_MAG      absolute magnitude H
+      40–47 C_PARAM      velocity distance parameter
+
+    Returns DataFrame with columns:
+      number, a_prop, e_prop, sin_i_prop, H, c_param, name, inc_prop,  q, Q
+    """
+    log.info("Fetching Flora family members from Nesvorný 2015 PDS …")
+    cache_file = CACHE_DIR / "402_flora.tab"
+    if cache_file.exists():
+        log.info("  (using cache: %s)", cache_file)
+        raw = cache_file.read_text()
+    else:
+        try:
+            r = requests.get(NESVORY_URL, timeout=60)
+            r.raise_for_status()
+            raw = r.text
+            cache_file.write_text(raw)
+        except requests.RequestException as exc:
+            raise RuntimeError(
+            f"Cannot download Nesvorný catalog: {exc}\n"
+            f"URL: {NESVORY_URL}"
+        ) from exc
+
+    colspecs = [(0, 6), (7, 14), (15, 23), (24, 32), (33, 38), (39, 47)]
+    names    = ["number", "a_prop", "e_prop", "sin_i_prop", "H", "c_param"]
+
+    from io import StringIO
+    df = pd.read_fwf(StringIO(raw), colspecs=colspecs, names=names, header=None)
+    df["number"]     = pd.to_numeric(df["number"],     errors="coerce").astype("Int64")
+    df["a_prop"]     = pd.to_numeric(df["a_prop"],     errors="coerce")
+    df["e_prop"]     = pd.to_numeric(df["e_prop"],     errors="coerce")
+    df["sin_i_prop"] = pd.to_numeric(df["sin_i_prop"], errors="coerce")
+    df["H"]          = pd.to_numeric(df["H"],          errors="coerce")
+    df["c_param"]    = pd.to_numeric(df["c_param"],    errors="coerce")
+    df = df.dropna(subset=["number", "a_prop", "e_prop", "sin_i_prop"])
+    df["inc_prop"]   = np.degrees(np.arcsin(df["sin_i_prop"].clip(-1, 1)))
+    df["name"]       = df["number"].apply(lambda n: f"({int(n)})")
+    # derive osculating-approximate q and Q from proper elements
+    df["q"] = df["a_prop"] * (1 - df["e_prop"])
+    df["Q"] = df["a_prop"] * (1 + df["e_prop"])
+
     if limit:
-        params["limit"] = str(limit)
+        df = df.head(limit)
 
-    try:
-        r = requests.get(SBDB_API, params=params, timeout=60)
-        r.raise_for_status()
-        data = r.json()
-    except requests.RequestException as exc:
-        log.warning("SBDB fetch failed (%s), using synthetic fallback", exc)
-        return _synthetic_flora(limit or 200)
-
-    fields = data.get("fields", [])
-    rows   = data.get("data",   [])
-
-    if not rows:
-        log.warning("SBDB returned 0 rows, using synthetic fallback")
-        return _synthetic_flora(limit or 200)
-
-    df = pd.DataFrame(rows, columns=fields)
-    df = df.rename(columns={"i": "inc", "full_name": "name"})
-    for col in ["H", "a", "e", "inc", "q", "Q"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    log.info("SBDB returned %d Flora-region bodies", len(df))
-    return df
-
-
-def _synthetic_flora(n: int) -> pd.DataFrame:
-    """
-    Generate synthetic Flora-like orbital elements when network is unavailable.
-    Distributions match Nesvorný 2015 proper element statistics.
-    """
-    rng = np.random.default_rng(42)
-    a   = rng.uniform(2.17, 2.38, n)
-    e   = rng.uniform(0.02, 0.18, n)
-    inc = rng.uniform(2.0,  9.0,  n)
-    H   = rng.uniform(11.0, 20.5, n)   # includes sub-km bodies (H>18)
-    q   = a * (1 - e)
-    Q   = a * (1 + e)
-    numbers = rng.integers(10000, 500000, n)
-
-    return pd.DataFrame({
-        "spkid":    [f"20{n}" for n in numbers],
-        "name":     [f"({num})" for num in numbers],
-        "H":        H,
-        "a":        a,
-        "e":        e,
-        "inc":      inc,
-        "q":        q,
-        "Q":        Q,
-        "class":    ["MBA"] * n,
-        "diameter": [None] * n,
-        "albedo":   [None] * n,
-    })
+    log.info("Nesvorný catalog: %d Flora family members", len(df))
+    return df.reset_index(drop=True)
 
 
 # ── WISE albedo fetch ─────────────────────────────────────────────────────────
 
-def fetch_wise_albedos() -> dict[str, float]:
+# Column indices in neowise_mainbelt.tab (0-based after CSV split):
+#  0  ASTEROID_NUMBER   1  PROV_DESIG   2  MPC_PACKED_NAME
+#  3  ABSOLUTE_MAG      4  SLOPE_PARAM  5  MEAN_JD
+#  6-9 N_W1..N_W4      10 FIT_CODE
+# 11  DIAMETER         12  DIAMETER_ERR
+# 13  V_ALBEDO         14  V_ALBEDO_ERR
+# ...
+_WISE_COLS = [
+    "ast_number", "prov_desig", "mpc_packed", "H_wise", "G",
+    "mean_jd", "n_w1", "n_w2", "n_w3", "n_w4", "fit_code",
+    "diameter_km", "diameter_err", "v_albedo", "v_albedo_err",
+    "ir_albedo", "ir_albedo_err", "beaming", "beaming_err",
+    "stacked_flag", "reference",
+]
+
+def fetch_wise_albedos() -> pd.DataFrame:
     """
-    Download WISE/NEOWISE albedo table and return {asteroid_name: pV} mapping.
-    Falls back to empty dict if network unavailable.
+    Download WISE/NEOWISE main-belt albedo+diameter table.
+    Returns DataFrame indexed by integer asteroid number with columns:
+      diameter_km, v_albedo, v_albedo_err
+    Only rows with valid V_ALBEDO are included.
     """
-    log.info("Fetching WISE albedos …")
-    try:
-        r = requests.get(WISE_PDS_URL, timeout=60)
-        r.raise_for_status()
-        from io import StringIO
-        df = pd.read_csv(StringIO(r.text), comment="#")
-        # typical column names vary; try common ones
-        name_col = next((c for c in df.columns if "name" in c.lower() or "desig" in c.lower()), None)
-        pv_col   = next((c for c in df.columns if "pv" in c.lower() or "albedo" in c.lower()), None)
-        if name_col and pv_col:
-            df[pv_col] = pd.to_numeric(df[pv_col], errors="coerce")
-            result = dict(zip(df[name_col].astype(str), df[pv_col]))
-            log.info("Loaded %d WISE albedos", len(result))
-            return result
-    except Exception as exc:
-        log.warning("WISE fetch failed (%s), proceeding without observed albedos", exc)
-    return {}
+    log.info("Fetching WISE/NEOWISE main-belt albedos (~24 MB) …")
+    cache_file = CACHE_DIR / "neowise_mainbelt.tab"
+    if cache_file.exists():
+        log.info("  (using cache: %s)", cache_file)
+        raw = cache_file.read_text()
+    else:
+        try:
+            r = requests.get(WISE_URL, timeout=120)
+            r.raise_for_status()
+            raw = r.text
+            cache_file.write_text(raw)
+        except requests.RequestException as exc:
+            log.warning("WISE fetch failed (%s) — proceeding without observed albedos", exc)
+            return pd.DataFrame()
+
+    from io import StringIO
+    df = pd.read_csv(
+        StringIO(raw),
+        names=_WISE_COLS,
+        header=None,
+        skipinitialspace=True,
+        dtype={"mpc_packed": str},
+        low_memory=False,
+    )
+    df["ast_number"] = pd.to_numeric(df["ast_number"], errors="coerce").astype("Int64")
+    df["v_albedo"]   = pd.to_numeric(df["v_albedo"],   errors="coerce")
+    df["diameter_km"]= pd.to_numeric(df["diameter_km"],errors="coerce")
+
+    # keep only rows with valid albedo; if multiple observations per body, take mean
+    df = df.dropna(subset=["ast_number", "v_albedo"])
+    df = df[df["v_albedo"] > 0]
+    agg = (
+        df.groupby("ast_number")
+        .agg(
+            diameter_km=("diameter_km", "mean"),
+            v_albedo=("v_albedo", "mean"),
+            v_albedo_err=("v_albedo_err", "mean"),
+            n_obs=("v_albedo", "count"),
+        )
+        .reset_index()
+    )
+    log.info("WISE: %d unique bodies with albedo measurement", len(agg))
+    return agg
 
 
 # ── diameter from H + albedo ──────────────────────────────────────────────────
@@ -214,8 +242,9 @@ def assign_spectral_class(row: pd.Series, rng: np.random.Generator) -> str:
     Assign spectral class probabilistically from Flora-region distribution.
     If WISE albedo is available, use it to constrain S vs C vs V boundary.
     """
-    pv = row.get("pv_wise")
-    if pd.notna(pv):
+    pv_raw = row.get("pv_wise")
+    pv = float(pv_raw) if (pv_raw is not None and pd.notna(pv_raw)) else None
+    if pv is not None:
         if pv > 0.25:
             candidates = {"S": 0.75, "V": 0.12, "E": 0.08, "M": 0.05}
         elif pv < 0.08:
@@ -236,25 +265,33 @@ def assign_spectral_class(row: pd.Series, rng: np.random.Generator) -> str:
 def build_tier1(row: pd.Series, rng: np.random.Generator) -> dict:
     """Tier 1 = catalog data (observable from Earth/catalogue)."""
     spec = row["spectral_class"]
-    pv   = row.get("pv_wise")
-    if pd.isna(pv):
-        lo, hi = ALBEDO_RANGE[spec]
-        pv = float(rng.uniform(lo, hi))
-        pv_source = "generated"
-    else:
-        pv_source = "WISE"
 
-    H = float(row["H"]) if pd.notna(row["H"]) else float(rng.uniform(12, 18))
-    D = float(row["diameter"]) if pd.notna(row.get("diameter")) else diameter_from_H(H, pv)
+    pv_wise = row.get("pv_wise")
+    if pd.notna(pv_wise) and float(pv_wise) > 0:
+        pv        = float(pv_wise)
+        pv_source = "WISE"
+    else:
+        lo, hi    = ALBEDO_RANGE[spec]
+        pv        = float(rng.uniform(lo, hi))
+        pv_source = "generated"
+
+    H = float(row["H"]) if pd.notna(row.get("H")) else float(rng.uniform(12, 18))
+
+    # prefer WISE diameter; fall back to H+pV formula
+    d_wise = row.get("diameter_wise")
+    if pd.notna(d_wise) and float(d_wise) > 0:
+        D = float(d_wise)
+    else:
+        D = diameter_from_H(H, pv)
 
     return {
         "H_magnitude":    round(H, 2),
         "albedo_pv":      round(pv, 4),
         "albedo_source":  pv_source,
         "diameter_km":    round(D, 3),
-        "a_au":           round(float(row["a"]), 6),
-        "e":              round(float(row["e"]), 6),
-        "inc_deg":        round(float(row["inc"]), 4),
+        "a_au":           round(float(row["a_prop"]), 6),
+        "e":              round(float(row["e_prop"]), 6),
+        "inc_deg":        round(float(row["inc_prop"]), 4),
         "q_au":           round(float(row["q"]), 6),
         "Q_au":           round(float(row["Q"]), 6),
         "spectral_class": spec,
@@ -489,20 +526,31 @@ def build_tier3(tier1: dict, tier2: dict, rng: np.random.Generator) -> dict:
 def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
     rng = np.random.default_rng(seed)
 
-    df   = fetch_nesvory_members(limit)
-    wise = fetch_wise_albedos()
+    flora = fetch_nesvory_members(limit)
+    wise  = fetch_wise_albedos()
 
-    # attach WISE albedo where we have it
-    def _extract_number(name: str) -> str:
-        import re
-        m = re.search(r"\((\d+)\)", str(name))
-        return m.group(1) if m else str(name).strip()
-
-    df["asteroid_num"] = df["name"].apply(_extract_number)
-    df["pv_wise"]      = df["asteroid_num"].map(wise)
+    # merge WISE into Flora by integer asteroid number
+    if not wise.empty:
+        flora = flora.merge(
+            wise[["ast_number", "diameter_km", "v_albedo", "v_albedo_err"]],
+            left_on="number", right_on="ast_number", how="left",
+        )
+        flora = flora.rename(columns={
+            "v_albedo":     "pv_wise",
+            "v_albedo_err": "pv_wise_err",
+            "diameter_km":  "diameter_wise",
+        })
+        flora = flora.drop(columns=["ast_number"], errors="ignore")
+        wise_hit = flora["pv_wise"].notna().sum()
+        log.info("WISE cross-match: %d / %d bodies have measured albedo", wise_hit, len(flora))
+    else:
+        flora["pv_wise"]      = np.nan
+        flora["pv_wise_err"]  = np.nan
+        flora["diameter_wise"]= np.nan
 
     asteroids = []
-    for _, row in df.iterrows():
+    for _, row in flora.iterrows():
+        row = row.copy()
         row["spectral_class"] = assign_spectral_class(row, rng)
 
         t1 = build_tier1(row, rng)
@@ -510,11 +558,11 @@ def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
         t3 = build_tier3(t1, t2, rng)
 
         record = {
-            "source_id":    str(row.get("spkid", row["name"])),
-            "name":         str(row["name"]).strip(),
-            "tier1":        t1,
-            "tier2":        t2,
-            "tier3":        t3,
+            "source_id": str(int(row["number"])),
+            "name":      row["name"],
+            "tier1":     t1,
+            "tier2":     t2,
+            "tier3":     t3,
         }
         asteroids.append(record)
 
