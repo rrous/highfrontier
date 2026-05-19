@@ -1,0 +1,786 @@
+[
+  {
+    "source_id": "8",
+    "name": "(8)",
+    "tier1": {
+      "H_magnitude": 6.56,
+      "albedo_pv": 0.205,
+      "albedo_source": "WISE",
+      "diameter_km": 158.423,
+      "a_au": 2.20143,
+      "e": 0.14487,
+      "inc_deg": 5.5734,
+      "q_au": 1.882509,
+      "Q_au": 2.520351,
+      "spectral_class": "M"
+    },
+    "tier2": {
+      "density_gcc": 4.168,
+      "mass_kg": 8.677254929639947e+18,
+      "rotation_h": 9.41,
+      "structure": "rubble_pile",
+      "elongation": 1.55,
+      "surface_gravity": 0.09229796,
+      "escape_velocity_ms": 120.922,
+      "thermal_inertia": 37.7
+    },
+    "tier3": {
+      "composition": {
+        "fe_ni_metal": 90.473,
+        "troilit": 6.9453,
+        "schreibersite": 1.8694,
+        "chromit": 0.5495,
+        "pt": 0.0027,
+        "pd": 0.0053,
+        "ir": 0.0008,
+        "au": 0.0009,
+        "ge": 0.0931,
+        "ga": 0.06
+      },
+      "rare_finds": [],
+      "porosity": 0.269
+    }
+  },
+  {
+    "source_id": "9",
+    "name": "(9)",
+    "tier1": {
+      "H_magnitude": 6.26,
+      "albedo_pv": 0.157,
+      "albedo_source": "WISE",
+      "diameter_km": 183.584,
+      "a_au": 2.38644,
+      "e": 0.12718,
+      "inc_deg": 4.6851,
+      "q_au": 2.082933,
+      "Q_au": 2.689947,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.952,
+      "mass_kg": 1.2801912827837137e+19,
+      "rotation_h": 5.6,
+      "structure": "rubble_pile",
+      "elongation": 1.09,
+      "surface_gravity": 0.10140314,
+      "escape_velocity_ms": 136.4404,
+      "thermal_inertia": 66.2
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 52.1842,
+        "pyroxen_lowca": 25.1785,
+        "pyroxen_highca": 5.6814,
+        "plagioklas": 7.1588,
+        "fe_ni_metal": 4.384,
+        "troilit": 4.8852,
+        "chromit": 0.528
+      },
+      "rare_finds": [],
+      "porosity": 0.421
+    }
+  },
+  {
+    "source_id": "43",
+    "name": "(43)",
+    "tier1": {
+      "H_magnitude": 7.87,
+      "albedo_pv": 0.26,
+      "albedo_source": "WISE",
+      "diameter_km": 74.381,
+      "a_au": 2.20335,
+      "e": 0.14058,
+      "inc_deg": 4.049,
+      "q_au": 1.893603,
+      "Q_au": 2.513097,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.361,
+      "mass_kg": 7.240854974782985e+17,
+      "rotation_h": 4.55,
+      "structure": "rubble_pile",
+      "elongation": 1.52,
+      "surface_gravity": 0.03493912,
+      "escape_velocity_ms": 50.9785,
+      "thermal_inertia": 90.9
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 50.3083,
+        "pyroxen_lowca": 22.0842,
+        "pyroxen_highca": 3.5861,
+        "plagioklas": 11.3381,
+        "fe_ni_metal": 5.0225,
+        "troilit": 7.2389,
+        "chromit": 0.4218
+      },
+      "rare_finds": [],
+      "porosity": 0.205
+    }
+  },
+  {
+    "source_id": "113",
+    "name": "(113)",
+    "tier1": {
+      "H_magnitude": 8.65,
+      "albedo_pv": 0.224,
+      "albedo_source": "WISE",
+      "diameter_km": 50.137,
+      "a_au": 2.37601,
+      "e": 0.12118,
+      "inc_deg": 4.4529,
+      "q_au": 2.088085,
+      "Q_au": 2.663935,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.101,
+      "mass_kg": 2.046395644607785e+17,
+      "rotation_h": 7.63,
+      "structure": "rubble_pile",
+      "elongation": 1.07,
+      "surface_gravity": 0.02173297,
+      "escape_velocity_ms": 33.0095,
+      "thermal_inertia": 82.8
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 58.1327,
+        "pyroxen_lowca": 21.9472,
+        "pyroxen_highca": 6.295,
+        "plagioklas": 6.9344,
+        "fe_ni_metal": 3.2896,
+        "troilit": 3.0138,
+        "chromit": 0.3872
+      },
+      "rare_finds": [],
+      "porosity": 0.496
+    }
+  },
+  {
+    "source_id": "254",
+    "name": "(254)",
+    "tier1": {
+      "H_magnitude": 11.64,
+      "albedo_pv": 0.192,
+      "albedo_source": "WISE",
+      "diameter_km": 11.614,
+      "a_au": 2.19482,
+      "e": 0.11783,
+      "inc_deg": 4.1593,
+      "q_au": 1.936204,
+      "Q_au": 2.453436,
+      "spectral_class": "K"
+    },
+    "tier2": {
+      "density_gcc": 2.744,
+      "mass_kg": 2250836370600337.5,
+      "rotation_h": 3.44,
+      "structure": "rubble_pile",
+      "elongation": 1.19,
+      "surface_gravity": 0.00445478,
+      "escape_velocity_ms": 7.1929,
+      "thermal_inertia": 50.2
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 46.5478,
+        "pyroxen_lowca": 25.6422,
+        "pyroxen_highca": 1.963,
+        "fe_ni_metal": 2.8312,
+        "plagioklas": 6.3198,
+        "fylosilikat": 9.0732,
+        "troilit": 7.6228
+      },
+      "rare_finds": [],
+      "porosity": 0.363
+    }
+  },
+  {
+    "source_id": "281",
+    "name": "(281)",
+    "tier1": {
+      "H_magnitude": 11.81,
+      "albedo_pv": 0.2933,
+      "albedo_source": "WISE",
+      "diameter_km": 11.208,
+      "a_au": 2.18777,
+      "e": 0.13059,
+      "inc_deg": 4.3886,
+      "q_au": 1.902069,
+      "Q_au": 2.473471,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.3,
+      "mass_kg": 2432954619534968.0,
+      "rotation_h": 2.95,
+      "structure": "rubble_pile",
+      "elongation": 1.06,
+      "surface_gravity": 0.0051704,
+      "escape_velocity_ms": 7.6125,
+      "thermal_inertia": 69.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 57.6386,
+        "pyroxen_lowca": 18.4335,
+        "pyroxen_highca": 5.9417,
+        "plagioklas": 6.402,
+        "fe_ni_metal": 6.0465,
+        "troilit": 5.1346,
+        "chromit": 0.4031
+      },
+      "rare_finds": [],
+      "porosity": 0.228
+    }
+  },
+  {
+    "source_id": "298",
+    "name": "(298)",
+    "tier1": {
+      "H_magnitude": 11.16,
+      "albedo_pv": 0.1565,
+      "albedo_source": "WISE",
+      "diameter_km": 19.336,
+      "a_au": 2.26385,
+      "e": 0.1476,
+      "inc_deg": 5.9586,
+      "q_au": 1.929706,
+      "Q_au": 2.597994,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 4.16,
+      "mass_kg": 1.5748188808741508e+16,
+      "rotation_h": 16.88,
+      "structure": "rubble_pile",
+      "elongation": 1.24,
+      "surface_gravity": 0.01124459,
+      "escape_velocity_ms": 14.7454,
+      "thermal_inertia": 82.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 59.5219,
+        "pyroxen_lowca": 19.1703,
+        "pyroxen_highca": 3.1447,
+        "plagioklas": 10.0756,
+        "fe_ni_metal": 2.7584,
+        "troilit": 4.8874,
+        "chromit": 0.4417
+      },
+      "rare_finds": [],
+      "porosity": 0.404
+    }
+  },
+  {
+    "source_id": "341",
+    "name": "(341)",
+    "tier1": {
+      "H_magnitude": 11.27,
+      "albedo_pv": 0.425,
+      "albedo_source": "WISE",
+      "diameter_km": 15.83,
+      "a_au": 2.1994,
+      "e": 0.12765,
+      "inc_deg": 5.2608,
+      "q_au": 1.918647,
+      "Q_au": 2.480153,
+      "spectral_class": "M"
+    },
+    "tier2": {
+      "density_gcc": 4.876,
+      "mass_kg": 1.0128386946747088e+16,
+      "rotation_h": 3.95,
+      "structure": "rubble_pile",
+      "elongation": 1.23,
+      "surface_gravity": 0.01079008,
+      "escape_velocity_ms": 13.0693,
+      "thermal_inertia": 112.9
+    },
+    "tier3": {
+      "composition": {
+        "fe_ni_metal": 93.1475,
+        "troilit": 4.015,
+        "schreibersite": 2.1908,
+        "chromit": 0.5957,
+        "pt": 0.0132,
+        "pd": 0.0071,
+        "ir": 0.0003,
+        "au": 0.0007,
+        "ge": 0.0064,
+        "ga": 0.0233
+      },
+      "rare_finds": [],
+      "porosity": 0.534
+    }
+  },
+  {
+    "source_id": "352",
+    "name": "(352)",
+    "tier1": {
+      "H_magnitude": 10.08,
+      "albedo_pv": 0.195,
+      "albedo_source": "WISE",
+      "diameter_km": 26.744,
+      "a_au": 2.1941,
+      "e": 0.13673,
+      "inc_deg": 4.2892,
+      "q_au": 1.894101,
+      "Q_au": 2.494099,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.031,
+      "mass_kg": 3.0361074751474964e+16,
+      "rotation_h": 4.81,
+      "structure": "rubble_pile",
+      "elongation": 1.37,
+      "surface_gravity": 0.01133211,
+      "escape_velocity_ms": 17.4088,
+      "thermal_inertia": 237.3
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 49.4337,
+        "pyroxen_lowca": 24.6948,
+        "pyroxen_highca": 7.0319,
+        "plagioklas": 10.5881,
+        "fe_ni_metal": 3.0806,
+        "troilit": 5.0769,
+        "chromit": 0.0939
+      },
+      "rare_finds": [],
+      "porosity": 0.239
+    }
+  },
+  {
+    "source_id": "364",
+    "name": "(364)",
+    "tier1": {
+      "H_magnitude": 9.7,
+      "albedo_pv": 0.2775,
+      "albedo_source": "WISE",
+      "diameter_km": 26.529,
+      "a_au": 2.22077,
+      "e": 0.15864,
+      "inc_deg": 5.54,
+      "q_au": 1.868467,
+      "Q_au": 2.573073,
+      "spectral_class": "V"
+    },
+    "tier2": {
+      "density_gcc": 3.879,
+      "mass_kg": 3.791939691858965e+16,
+      "rotation_h": 8.0,
+      "structure": "rubble_pile",
+      "elongation": 1.0,
+      "surface_gravity": 0.01438354,
+      "escape_velocity_ms": 19.5341,
+      "thermal_inertia": 159.0
+    },
+    "tier3": {
+      "composition": {
+        "pyroxen_highca": 62.739,
+        "plagioklas": 33.5306,
+        "ilmenit": 1.6354,
+        "chromit": 0.9689,
+        "olivin": 1.1261
+      },
+      "rare_finds": [],
+      "porosity": 0.317
+    }
+  },
+  {
+    "source_id": "428",
+    "name": "(428)",
+    "tier1": {
+      "H_magnitude": 11.88,
+      "albedo_pv": 0.069,
+      "albedo_source": "WISE",
+      "diameter_km": 20.184,
+      "a_au": 2.30792,
+      "e": 0.15457,
+      "inc_deg": 5.7277,
+      "q_au": 1.951185,
+      "Q_au": 2.664655,
+      "spectral_class": "K"
+    },
+    "tier2": {
+      "density_gcc": 3.233,
+      "mass_kg": 1.3919844409826258e+16,
+      "rotation_h": 16.96,
+      "structure": "rubble_pile",
+      "elongation": 1.62,
+      "surface_gravity": 0.0091215,
+      "escape_velocity_ms": 13.5687,
+      "thermal_inertia": 124.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 48.7629,
+        "pyroxen_lowca": 26.547,
+        "pyroxen_highca": 5.8519,
+        "fe_ni_metal": 3.8745,
+        "plagioklas": 5.3921,
+        "fylosilikat": 4.3148,
+        "troilit": 5.2568
+      },
+      "rare_finds": [],
+      "porosity": 0.283
+    }
+  },
+  {
+    "source_id": "453",
+    "name": "(453)",
+    "tier1": {
+      "H_magnitude": 10.36,
+      "albedo_pv": 0.2327,
+      "albedo_source": "WISE",
+      "diameter_km": 23.537,
+      "a_au": 2.18323,
+      "e": 0.13962,
+      "inc_deg": 5.346,
+      "q_au": 1.878407,
+      "Q_au": 2.488053,
+      "spectral_class": "K"
+    },
+    "tier2": {
+      "density_gcc": 2.739,
+      "mass_kg": 1.8700611394138268e+16,
+      "rotation_h": 12.0,
+      "structure": "rubble_pile",
+      "elongation": 1.45,
+      "surface_gravity": 0.00901156,
+      "escape_velocity_ms": 14.5638,
+      "thermal_inertia": 31.8
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 46.1212,
+        "pyroxen_lowca": 27.9332,
+        "pyroxen_highca": 5.74,
+        "fe_ni_metal": 8.1085,
+        "plagioklas": 1.8453,
+        "fylosilikat": 5.148,
+        "troilit": 5.1038
+      },
+      "rare_finds": [],
+      "porosity": 0.276
+    }
+  },
+  {
+    "source_id": "496",
+    "name": "(496)",
+    "tier1": {
+      "H_magnitude": 11.63,
+      "albedo_pv": 0.2395,
+      "albedo_source": "WISE",
+      "diameter_km": 13.38,
+      "a_au": 2.19889,
+      "e": 0.13095,
+      "inc_deg": 4.4167,
+      "q_au": 1.910945,
+      "Q_au": 2.486835,
+      "spectral_class": "C"
+    },
+    "tier2": {
+      "density_gcc": 1.461,
+      "mass_kg": 1832000428684849.5,
+      "rotation_h": 9.96,
+      "structure": "rubble_pile",
+      "elongation": 1.29,
+      "surface_gravity": 0.00273187,
+      "escape_velocity_ms": 6.0459,
+      "thermal_inertia": 194.3
+    },
+    "tier3": {
+      "composition": {
+        "fylosilikat": 64.6126,
+        "magnetit": 6.9093,
+        "troilit": 4.5934,
+        "karbonaty": 7.783,
+        "h2o_bound": 7.5395,
+        "c_organic": 0.0,
+        "olivin": 6.482,
+        "pyroxen_lowca": 2.0803
+      },
+      "rare_finds": [],
+      "porosity": 0.426
+    }
+  },
+  {
+    "source_id": "525",
+    "name": "(525)",
+    "tier1": {
+      "H_magnitude": 11.94,
+      "albedo_pv": 0.221,
+      "albedo_source": "WISE",
+      "diameter_km": 9.326,
+      "a_au": 2.24519,
+      "e": 0.14855,
+      "inc_deg": 6.6428,
+      "q_au": 1.911667,
+      "Q_au": 2.578713,
+      "spectral_class": "C"
+    },
+    "tier2": {
+      "density_gcc": 1.559,
+      "mass_kg": 662119499935669.1,
+      "rotation_h": 3.93,
+      "structure": "rubble_pile",
+      "elongation": 1.24,
+      "surface_gravity": 0.00203232,
+      "escape_velocity_ms": 4.3536,
+      "thermal_inertia": 110.3
+    },
+    "tier3": {
+      "composition": {
+        "fylosilikat": 72.1063,
+        "magnetit": 5.252,
+        "troilit": 5.0805,
+        "karbonaty": 3.4946,
+        "h2o_bound": 8.7129,
+        "c_organic": 4.2764,
+        "olivin": 0.014,
+        "pyroxen_lowca": 1.0633
+      },
+      "rare_finds": [],
+      "porosity": 0.314
+    }
+  },
+  {
+    "source_id": "540",
+    "name": "(540)",
+    "tier1": {
+      "H_magnitude": 10.57,
+      "albedo_pv": 0.2925,
+      "albedo_source": "WISE",
+      "diameter_km": 17.718,
+      "a_au": 2.21889,
+      "e": 0.14567,
+      "inc_deg": 5.9822,
+      "q_au": 1.895664,
+      "Q_au": 2.542116,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 4.188,
+      "mass_kg": 1.2197794677328656e+16,
+      "rotation_h": 2.62,
+      "structure": "rubble_pile",
+      "elongation": 1.39,
+      "surface_gravity": 0.01037285,
+      "escape_velocity_ms": 13.5568,
+      "thermal_inertia": 59.4
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 56.6526,
+        "pyroxen_lowca": 24.248,
+        "pyroxen_highca": 1.3822,
+        "plagioklas": 11.2138,
+        "fe_ni_metal": 2.2569,
+        "troilit": 4.0616,
+        "chromit": 0.185
+      },
+      "rare_finds": [],
+      "porosity": 0.458
+    }
+  },
+  {
+    "source_id": "553",
+    "name": "(553)",
+    "tier1": {
+      "H_magnitude": 12.01,
+      "albedo_pv": 0.337,
+      "albedo_source": "WISE",
+      "diameter_km": 8.672,
+      "a_au": 2.23083,
+      "e": 0.12734,
+      "inc_deg": 4.7662,
+      "q_au": 1.946756,
+      "Q_au": 2.514904,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.633,
+      "mass_kg": 1240649486683192.0,
+      "rotation_h": 5.91,
+      "structure": "rubble_pile",
+      "elongation": 1.37,
+      "surface_gravity": 0.0044041,
+      "escape_velocity_ms": 6.18,
+      "thermal_inertia": 65.9
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.8816,
+        "pyroxen_lowca": 19.1924,
+        "pyroxen_highca": 3.3786,
+        "plagioklas": 9.8755,
+        "fe_ni_metal": 3.8126,
+        "troilit": 10.843,
+        "chromit": 1.0163
+      },
+      "rare_finds": [],
+      "porosity": 0.393
+    }
+  },
+  {
+    "source_id": "685",
+    "name": "(685)",
+    "tier1": {
+      "H_magnitude": 11.86,
+      "albedo_pv": 0.3735,
+      "albedo_source": "generated",
+      "diameter_km": 9.233,
+      "a_au": 2.23587,
+      "e": 0.14475,
+      "inc_deg": 4.5179,
+      "q_au": 1.912228,
+      "Q_au": 2.559512,
+      "spectral_class": "V"
+    },
+    "tier2": {
+      "density_gcc": 3.984,
+      "mass_kg": 1641794304291049.5,
+      "rotation_h": 8.95,
+      "structure": "rubble_pile",
+      "elongation": 1.6,
+      "surface_gravity": 0.00514137,
+      "escape_velocity_ms": 6.8899,
+      "thermal_inertia": 120.1
+    },
+    "tier3": {
+      "composition": {
+        "pyroxen_highca": 54.7356,
+        "plagioklas": 42.2888,
+        "ilmenit": 1.7563,
+        "chromit": 1.2193,
+        "olivin": 0.0
+      },
+      "rare_finds": [],
+      "porosity": 0.384
+    }
+  },
+  {
+    "source_id": "700",
+    "name": "(700)",
+    "tier1": {
+      "H_magnitude": 10.93,
+      "albedo_pv": 0.247,
+      "albedo_source": "WISE",
+      "diameter_km": 16.34,
+      "a_au": 2.22954,
+      "e": 0.15385,
+      "inc_deg": 6.4029,
+      "q_au": 1.886525,
+      "Q_au": 2.572555,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.225,
+      "mass_kg": 7366098279761583.0,
+      "rotation_h": 10.28,
+      "structure": "rubble_pile",
+      "elongation": 1.78,
+      "surface_gravity": 0.00736512,
+      "escape_velocity_ms": 10.9702,
+      "thermal_inertia": 61.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 45.0677,
+        "pyroxen_lowca": 28.3334,
+        "pyroxen_highca": 4.4584,
+        "plagioklas": 11.4013,
+        "fe_ni_metal": 2.5804,
+        "troilit": 7.6379,
+        "chromit": 0.5209
+      },
+      "rare_finds": [],
+      "porosity": 0.37
+    }
+  },
+  {
+    "source_id": "703",
+    "name": "(703)",
+    "tier1": {
+      "H_magnitude": 12.45,
+      "albedo_pv": 0.368,
+      "albedo_source": "WISE",
+      "diameter_km": 7.25,
+      "a_au": 2.17492,
+      "e": 0.12369,
+      "inc_deg": 3.3267,
+      "q_au": 1.905904,
+      "Q_au": 2.443936,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.783,
+      "mass_kg": 754777799032380.0,
+      "rotation_h": 8.93,
+      "structure": "rubble_pile",
+      "elongation": 1.39,
+      "surface_gravity": 0.00383345,
+      "escape_velocity_ms": 5.2719,
+      "thermal_inertia": 132.1
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.7439,
+        "pyroxen_lowca": 30.9243,
+        "pyroxen_highca": 4.6432,
+        "plagioklas": 8.0686,
+        "fe_ni_metal": 1.6736,
+        "troilit": 2.8244,
+        "chromit": 0.1219
+      },
+      "rare_finds": [],
+      "porosity": 0.205
+    }
+  },
+  {
+    "source_id": "711",
+    "name": "(711)",
+    "tier1": {
+      "H_magnitude": 11.69,
+      "albedo_pv": 0.453,
+      "albedo_source": "WISE",
+      "diameter_km": 9.026,
+      "a_au": 2.23724,
+      "e": 0.14929,
+      "inc_deg": 6.03,
+      "q_au": 1.903242,
+      "Q_au": 2.571238,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "density_gcc": 3.999,
+      "mass_kg": 1539768961951352.5,
+      "rotation_h": 5.16,
+      "structure": "rubble_pile",
+      "elongation": 1.38,
+      "surface_gravity": 0.00504558,
+      "escape_velocity_ms": 6.7484,
+      "thermal_inertia": 30.0
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 47.9083,
+        "pyroxen_lowca": 24.2666,
+        "pyroxen_highca": 3.0361,
+        "plagioklas": 11.0875,
+        "fe_ni_metal": 10.623,
+        "troilit": 2.814,
+        "chromit": 0.2645
+      },
+      "rare_finds": [],
+      "porosity": 0.286
+    }
+  }
+]
