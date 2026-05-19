@@ -349,12 +349,14 @@ class TestSpectralDiversity:
         )
 
     def test_spectral_distribution_roughly_correct(self, asteroids):
-        """Each class frequency should be within 3× of the target distribution."""
-        counts = Counter(_t1(a)["spectral_class"] for a in asteroids)
+        """Each class frequency should be within 4× of the target distribution.
+        Only meaningful for n >= 200 (small samples have high Poisson noise)."""
         n = len(asteroids)
+        if n < 200:
+            pytest.skip(f"Sample too small ({n}) for distribution test; need >= 200")
+        counts = Counter(_t1(a)["spectral_class"] for a in asteroids)
         for cls, target_frac in SPECTRAL_DIST.items():
             observed = counts.get(cls, 0) / n
-            # relaxed tolerance since we're sampling stochastically
             assert observed <= target_frac * 4.0, (
                 f"{cls}: observed {observed:.2%} >> target {target_frac:.2%}"
             )

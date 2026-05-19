@@ -157,6 +157,116 @@ def fetch_nesvory_members(limit: Optional[int] = None) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
+# ── SBDB metadata fetch (name, H, spectral class, rotation) ──────────────────
+
+def _parse_full_name(full_name: str) -> tuple[int | None, str | None, str | None]:
+    """
+    Parse SBDB full_name into (number, given_name, provisional_desig).
+    Examples:
+      '     8 Flora (A847 UA)'  → (8,  'Flora',    'A847 UA')
+      ' 42559 (1996 VH28)'      → (42559, None,    '1996 VH28')
+      '2012 XY3'                → (None,  None,    '2012 XY3')
+    """
+    import re
+    s = str(full_name).strip()
+    # numbered + named: "8 Flora (A847 UA)"
+    m = re.match(r'^(\d+)\s+([A-Z][a-zA-Z\-\']+(?:\s+[A-Z][a-zA-Z]+)*)\s*\(([^)]+)\)', s)
+    if m:
+        return int(m.group(1)), m.group(2).strip(), m.group(3).strip()
+    # numbered + provisional only: "42559 (1996 VH28)"
+    m = re.match(r'^(\d+)\s+\(([^)]+)\)', s)
+    if m:
+        return int(m.group(1)), None, m.group(2).strip()
+    # provisional only: "2012 XY3"
+    return None, None, s
+
+
+def fetch_sbdb_metadata(numbers: set[int]) -> pd.DataFrame:
+    """
+    Fetch name, H, spectral class, rotation period from JPL SBDB for a set
+    of asteroid numbers. Paginates by spkid range to avoid timeout.
+
+    Returns DataFrame indexed by asteroid number with columns:
+      name, H_sbdb, spec_T, spec_B, rot_per_sbdb
+    """
+    cache_file = CACHE_DIR / "sbdb_flora_metadata.json"
+    if cache_file.exists():
+        log.info("SBDB metadata: using cache (%s)", cache_file)
+        rows = json.loads(cache_file.read_text())
+        df = pd.DataFrame(rows)
+        df["number"] = df["number"].astype("Int64")
+        return df
+
+    log.info("Fetching SBDB metadata (name/H/spectral/rotation) for %d Flora members …",
+             len(numbers))
+
+    # spkid for numbered asteroid N = 20_000_000 + N
+    max_num   = max(numbers)
+    page_size = 50_000   # rows per request
+    step      = 50_000   # spkid stride
+    base      = 20_000_000
+    all_rows: list[dict] = []
+
+    for lo in range(0, max_num + step, step):
+        hi = lo + step
+        params = {
+            "fields": "spkid,full_name,H,spec_T,spec_B,rot_per",
+            "sb-class": "MBA",
+            "sb-cdata": json.dumps({
+                "AND": [
+                    f"spkid|GE|{base + lo}",
+                    f"spkid|LT|{base + hi}",
+                ]
+            }),
+            "limit": str(page_size),
+        }
+        for attempt in range(3):
+            try:
+                r = requests.get(SBDB_API, params=params, timeout=90)
+                r.raise_for_status()
+                break
+            except requests.RequestException as exc:
+                wait = 4 ** attempt
+                log.warning("  SBDB page spkid %d-%d attempt %d failed: %s (retry in %ds)",
+                            lo, hi, attempt + 1, exc, wait)
+                time.sleep(wait)
+        else:
+            log.warning("  skipping spkid range %d-%d after 3 failures", lo, hi)
+            continue
+
+        data  = r.json()
+        batch = data.get("data") or []
+        if not batch:
+            continue
+
+        for row in batch:
+            spkid, full_name, H, spec_T, spec_B, rot_per = row
+            num, given_name, prov = _parse_full_name(full_name)
+            if num is None or num not in numbers:
+                continue
+            all_rows.append({
+                "number":      num,
+                "name":        given_name or f"({num})",
+                "H_sbdb":      float(H)    if H       is not None else None,
+                "spec_T":      spec_T      if spec_T  else None,
+                "spec_B":      spec_B      if spec_B  else None,
+                "rot_per_sbdb": float(rot_per) if rot_per else None,
+            })
+
+        found = len(all_rows)
+        log.info("  spkid %d–%d: %d batch rows, %d total Flora hits",
+                 lo, hi, len(batch), found)
+
+    cache_file.write_text(json.dumps(all_rows, ensure_ascii=False))
+    df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame(
+        columns=["number", "name", "H_sbdb", "spec_T", "spec_B", "rot_per_sbdb"]
+    )
+    if not df.empty:
+        df["number"] = df["number"].astype("Int64")
+    log.info("SBDB metadata: %d / %d Flora members matched", len(df), len(numbers))
+    return df
+
+
 # ── WISE albedo fetch ─────────────────────────────────────────────────────────
 
 # Column indices in neowise_mainbelt.tab (0-based after CSV split):
@@ -211,17 +321,20 @@ def fetch_wise_albedos() -> pd.DataFrame:
 
     # keep only rows with valid albedo; if multiple observations per body, take mean
     df = df.dropna(subset=["ast_number", "v_albedo"])
-    df = df[df["v_albedo"] > 0]
+    # pV must be physically plausible; 1.0 is a NEATM boundary/failed fit
+    df = df[(df["v_albedo"] > 0) & (df["v_albedo"] < 1.0)]
+    # for bodies with multiple observations, keep the one with smallest albedo error
+    df["v_albedo_err"] = pd.to_numeric(df["v_albedo_err"], errors="coerce")
+    df = df.sort_values("v_albedo_err")
     agg = (
-        df.groupby("ast_number")
-        .agg(
-            diameter_km=("diameter_km", "mean"),
-            v_albedo=("v_albedo", "mean"),
-            v_albedo_err=("v_albedo_err", "mean"),
-            n_obs=("v_albedo", "count"),
-        )
+        df.groupby("ast_number", sort=False)
+        .first()   # first = lowest error after sort
         .reset_index()
+        [["ast_number", "diameter_km", "v_albedo", "v_albedo_err"]]
     )
+    agg["n_obs"] = df.groupby("ast_number")["v_albedo"].count().reindex(
+        agg["ast_number"].values
+    ).values
     log.info("WISE: %d unique bodies with albedo measurement", len(agg))
     return agg
 
@@ -239,18 +352,32 @@ def diameter_from_H(H: float, pV: float) -> float:
 
 def assign_spectral_class(row: pd.Series, rng: np.random.Generator) -> str:
     """
-    Assign spectral class probabilistically from Flora-region distribution.
-    If WISE albedo is available, use it to constrain S vs C vs V boundary.
+    Assign spectral class: real SBDB type > WISE-albedo-constrained > statistical.
     """
+    # 1. prefer measured spectral type (Tholen > Bus-DeMeo)
+    for col in ("spec_T", "spec_B"):
+        val = row.get(col)
+        if val and pd.notna(val):
+            # map compound types to our 8-class scheme
+            raw = str(val).strip().upper()
+            for cls in ("S", "C", "V", "D", "M", "E", "P", "K"):
+                if raw.startswith(cls):
+                    return cls
+            return "U"   # known but unmapped type
+
+    # 2. use WISE albedo to constrain
     pv_raw = row.get("pv_wise")
     pv = float(pv_raw) if (pv_raw is not None and pd.notna(pv_raw)) else None
     if pv is not None:
         if pv > 0.25:
-            candidates = {"S": 0.75, "V": 0.12, "E": 0.08, "M": 0.05}
+            # bright → S dominant, some V and E (inner belt, DeMeo & Carry 2013)
+            candidates = {"S": 0.80, "V": 0.10, "E": 0.06, "M": 0.04}
         elif pv < 0.08:
-            candidates = {"C": 0.50, "D": 0.20, "P": 0.20, "K": 0.10}
+            # dark → C/D/P; K rare even at low albedo
+            candidates = {"C": 0.55, "D": 0.20, "P": 0.20, "K": 0.05}
         else:
-            candidates = {"S": 0.55, "K": 0.15, "M": 0.15, "C": 0.10, "U": 0.05}
+            # intermediate 0.08–0.25: dominated by S in inner belt
+            candidates = {"S": 0.74, "M": 0.09, "C": 0.09, "K": 0.04, "U": 0.04}
     else:
         candidates = SPECTRAL_DIST
 
@@ -300,7 +427,7 @@ def build_tier1(row: pd.Series, rng: np.random.Generator) -> dict:
 
 # ── Tier 2 parameters ─────────────────────────────────────────────────────────
 
-def build_tier2(tier1: dict, rng: np.random.Generator) -> dict:
+def build_tier2(tier1: dict, row: pd.Series, rng: np.random.Generator) -> dict:
     """Tier 2 = flyby measurements (density, rotation, surface features)."""
     spec = tier1["spectral_class"]
     D    = tier1["diameter_km"]
@@ -312,9 +439,14 @@ def build_tier2(tier1: dict, rng: np.random.Generator) -> dict:
     r_m  = D * 1000 / 2
     mass = density * 1e3 * (4 / 3) * np.pi * r_m ** 3
 
-    # rotation: lognormal
-    rot_h = float(np.exp(rng.normal(ROT_LOG_MEAN, ROT_LOG_STD)))
-    rot_h = round(max(2.0, min(rot_h, 1000.0)), 2)
+    # rotation: prefer measured SBDB/LCDB value where available
+    rot_raw = row.get("rot_per_sbdb") if row is not None else None
+    if rot_raw is not None and pd.notna(rot_raw) and float(rot_raw) >= 2.0:
+        rot_h      = round(float(rot_raw), 3)
+        rot_source = "LCDB"
+    else:
+        rot_h      = round(float(np.clip(np.exp(rng.normal(ROT_LOG_MEAN, ROT_LOG_STD)), 2.0, 1000.0)), 2)
+        rot_source = "generated"
 
     # shape: rubble pile vs monolith threshold ~150 m (Richardson 2002)
     if D < 0.15:
@@ -345,6 +477,7 @@ def build_tier2(tier1: dict, rng: np.random.Generator) -> dict:
         "density_gcc":       round(density, 3),
         "mass_kg":           round(mass, 3),
         "rotation_h":        rot_h,
+        "rotation_source":   rot_source,
         "structure":         structure,
         "elongation":        elongation,
         "surface_gravity":   g_surf,
@@ -528,8 +661,9 @@ def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
 
     flora = fetch_nesvory_members(limit)
     wise  = fetch_wise_albedos()
+    sbdb  = fetch_sbdb_metadata(set(flora["number"].dropna().astype(int)))
 
-    # merge WISE into Flora by integer asteroid number
+    # ── merge WISE ────────────────────────────────────────────────────────────
     if not wise.empty:
         flora = flora.merge(
             wise[["ast_number", "diameter_km", "v_albedo", "v_albedo_err"]],
@@ -541,12 +675,28 @@ def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
             "diameter_km":  "diameter_wise",
         })
         flora = flora.drop(columns=["ast_number"], errors="ignore")
-        wise_hit = flora["pv_wise"].notna().sum()
-        log.info("WISE cross-match: %d / %d bodies have measured albedo", wise_hit, len(flora))
+        log.info("WISE cross-match: %d / %d bodies have measured albedo",
+                 flora["pv_wise"].notna().sum(), len(flora))
     else:
-        flora["pv_wise"]      = np.nan
-        flora["pv_wise_err"]  = np.nan
-        flora["diameter_wise"]= np.nan
+        flora["pv_wise"] = flora["pv_wise_err"] = flora["diameter_wise"] = np.nan
+
+    # ── merge SBDB ────────────────────────────────────────────────────────────
+    if not sbdb.empty:
+        flora = flora.merge(
+            sbdb[["number", "name", "H_sbdb", "spec_T", "spec_B", "rot_per_sbdb"]],
+            on="number", how="left", suffixes=("_nesvorny", "_sbdb"),
+        )
+        # prefer SBDB name over the plain "(N)" placeholder
+        if "name_sbdb" in flora.columns:
+            flora["name"] = flora["name_sbdb"].fillna(flora["name_nesvorny"])
+            flora = flora.drop(columns=["name_nesvorny", "name_sbdb"], errors="ignore")
+        # prefer SBDB H (more up-to-date than Nesvorný epoch)
+        flora["H"] = flora["H_sbdb"].combine_first(flora["H"])
+        log.info("SBDB cross-match: %d / %d bodies have SBDB name/spectral data",
+                 flora["spec_T"].notna().sum() + flora["spec_B"].notna().sum(), len(flora))
+    else:
+        for col in ("spec_T", "spec_B", "rot_per_sbdb"):
+            flora[col] = np.nan
 
     asteroids = []
     for _, row in flora.iterrows():
@@ -554,12 +704,12 @@ def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
         row["spectral_class"] = assign_spectral_class(row, rng)
 
         t1 = build_tier1(row, rng)
-        t2 = build_tier2(t1, rng)
+        t2 = build_tier2(t1, row, rng)
         t3 = build_tier3(t1, t2, rng)
 
         record = {
             "source_id": str(int(row["number"])),
-            "name":      row["name"],
+            "name":      str(row["name"]),
             "tier1":     t1,
             "tier2":     t2,
             "tier3":     t3,
