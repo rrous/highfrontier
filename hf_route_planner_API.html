@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HighFrontier — Route Planner (API)</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#060910; --surface:#0c1322; --border:#182540;
+  --dim:#3d5a78; --mid:#6a9cbc; --bright:#b8d4ee; --accent:#1a6ed0;
+  --S:#c89836; --C:#60586a; --E:#d8d6d2; --V:#9c2e24; --M:#9c9a98; --D:#785040;
+  --green:#46c846; --yellow:#d89820; --red:#d03030;
+}
+html,body { height:100%; background:var(--bg); color:var(--mid); font-family:'Share Tech Mono',monospace; overflow:hidden; }
+.app { height:100dvh; max-width:430px; margin:0 auto; display:flex; flex-direction:column; }
+
+/* ── HEADER ── */
+.header {
+  flex-shrink:0; display:flex; align-items:center; gap:8px;
+  padding:8px 12px; border-bottom:1px solid var(--border); background:var(--surface);
+}
+.h-dry {
+  flex-shrink:0; width:26px; height:26px; border-radius:4px;
+  border:1px solid var(--border); background:var(--bg);
+  color:var(--bright); font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:border-color .2s; user-select:none;
+}
+.h-dry:hover { border-color:var(--mid); }
+/* total mass toggle — cycles water level */
+.h-total {
+  flex-shrink:0; height:26px; border-radius:4px; padding:0 8px;
+  border:1px solid var(--border); background:var(--bg);
+  color:var(--mid); font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; gap:2px;
+  transition:border-color .2s; user-select:none; white-space:nowrap;
+}
+.h-total span { color:var(--bright); font-size:12px; }
+.h-total:hover { border-color:var(--mid); }
+/* fuel % — also the GO trigger */
+.h-pct {
+  flex:1; min-width:0; height:26px; border-radius:4px; padding:0 8px;
+  border:1px solid var(--border); background:var(--bg);
+  font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900;
+  cursor:default; display:flex; align-items:center; justify-content:center;
+  transition:border-color .25s, box-shadow .25s;
+}
+.h-pct.has-route { border-color:var(--green); box-shadow:0 0 8px rgba(70,200,70,.22); cursor:pointer; }
+.h-pct.has-route:hover { box-shadow:0 0 16px rgba(70,200,70,.45); }
+.h-pct.negative  { border-color:var(--red);   box-shadow:0 0 6px rgba(208,48,48,.20); cursor:not-allowed; }
+#h-pct-val { transition:color .2s; }
+.h-sep   { width:1px; height:18px; background:var(--border); flex-shrink:0; }
+.h-time  { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; white-space:nowrap; flex-shrink:0; transition:color .2s; }
+.h-speed { font-size:9px; color:var(--dim); letter-spacing:.04em; white-space:nowrap; flex-shrink:0; }
+.h-legend-btn {
+  flex-shrink:0; width:26px; height:26px; border-radius:50%;
+  border:1px solid var(--border); background:transparent; color:var(--dim);
+  font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:border-color .2s, color .2s; font-family:'Share Tech Mono',monospace;
+}
+.h-legend-btn.active, .h-legend-btn:hover { border-color:var(--accent); color:var(--bright); }
+
+/* ── MAP ── */
+.map-container {
+  flex:1; overflow-x:auto; overflow-y:hidden; position:relative;
+  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+}
+.map-container::-webkit-scrollbar { height:3px; }
+.map-container::-webkit-scrollbar-thumb { background:var(--border); }
+.map-inner {
+  position:relative; height:100%; width:760px;
+  background:radial-gradient(ellipse at 30% 38%, #0a1828 0%, var(--bg) 68%);
+  flex-shrink:0;
+}
+#route-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+.base-el { position:absolute; transform:translate(-50%,-50%); pointer-events:none; }
+.asteroid-btn {
+  position:absolute; transform:translate(-50%,-50%);
+  cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  user-select:none;
+}
+.a-ring {
+  border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center;
+  transition:transform .15s, box-shadow .2s; border:2px solid transparent;
+}
+.asteroid-btn:hover .a-ring { transform:scale(.92); }
+.asteroid-btn:active .a-ring { transform:scale(.82); }
+.a-type  { font-size:11px; font-weight:700; color:rgba(0,0,0,.5); font-family:'Orbitron',sans-serif; line-height:1; pointer-events:none; }
+.a-label { font-size:11px; color:var(--dim); white-space:nowrap; transition:color .2s; }
+.asteroid-btn.is-stop  .a-ring  { border-color:var(--green);  box-shadow:0 0 12px rgba(70,200,70,.55); }
+.asteroid-btn.is-stop  .a-label { color:var(--green); }
+.asteroid-btn.is-flyby .a-ring  { border-color:var(--yellow); box-shadow:0 0 10px rgba(216,152,32,.45); border-style:dashed; }
+.asteroid-btn.is-flyby .a-label { color:var(--yellow); }
+.a-badge {
+  position:absolute; top:-6px; right:-6px; width:16px; height:16px; border-radius:50%;
+  font-family:'Orbitron',sans-serif; font-size:9px; font-weight:900;
+  display:none; align-items:center; justify-content:center; color:#000; z-index:2;
+}
+.is-stop  .a-badge { display:flex; background:var(--green); }
+.is-flyby .a-badge { display:flex; background:var(--yellow); }
+.scroll-hint {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  color:var(--dim); font-size:20px; pointer-events:none; opacity:.5;
+  animation:pulse-r 2s ease-in-out infinite;
+}
+@keyframes pulse-r {
+  0%,100%{opacity:.25;transform:translateY(-50%) translateX(0)}
+  50%{opacity:.6;transform:translateY(-50%) translateX(4px)}
+}
+@keyframes flash-red { 0%,100%{box-shadow:none}50%{box-shadow:0 0 22px rgba(208,48,48,.95)} }
+.flash-err .a-ring { animation:flash-red .4s ease; }
+
+/* ── INFO CARD (full screen overlay) ── */
+.info-card {
+  position:fixed; top:43px; bottom:0;
+  left:50%; transform:translateX(-50%) translateY(110%);
+  width:100%; max-width:430px;
+  z-index:200; background:rgba(7,11,20,.99);
+  backdrop-filter:blur(10px);
+  display:flex; flex-direction:column;
+  transition:transform .22s cubic-bezier(.4,0,.2,1);
+}
+.info-card.visible { transform:translateX(-50%) translateY(0); }
+
+/* drag handle — hidden now (full screen) */
+.info-handle { display:none; }
+
+.info-hdr {
+  flex-shrink:0; display:flex; align-items:center; gap:10px;
+  padding:12px 14px 10px; border-bottom:1px solid var(--border);
+}
+.info-badge {
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900;
+}
+.info-name {
+  flex:1; font-family:'Orbitron',sans-serif; font-size:14px; font-weight:700;
+  color:var(--bright); letter-spacing:.06em;
+  min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.info-close {
+  flex-shrink:0; width:24px; height:24px; border-radius:50%;
+  border:1px solid var(--border); background:transparent;
+  color:var(--dim); font-size:16px; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .2s, color .2s;
+}
+.info-close:hover { border-color:var(--red); color:var(--red); }
+
+/* surface canvas */
+.info-surface {
+  flex-shrink:0; height:185px; overflow:hidden;
+  border-bottom:1px solid var(--border);
+}
+.info-surface canvas { display:block; width:100%; height:100%; }
+
+/* data rows — no scroll, all visible */
+.info-data {
+  flex:1; padding:12px 14px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.ir { display:flex; align-items:center; gap:12px; min-height:22px; }
+.ir-lbl { width:32px; flex-shrink:0; font-size:11px; color:var(--dim); text-align:right; letter-spacing:.04em; }
+.ir-val { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; color:var(--bright); }
+.ir-val.unk { color:var(--dim); font-family:'Share Tech Mono',monospace; font-weight:400; font-size:14px; }
+
+/* header flight mode */
+.header.flight-mode { background:rgba(12,28,60,.97); border-bottom-color:#1a3a6a; }
+
+/* data rows */
+.info-data {
+  flex:1; overflow-y:auto; padding:10px 14px;
+  display:flex; flex-direction:column; gap:7px;
+  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+}
+.info-data::-webkit-scrollbar { width:3px; }
+.info-data::-webkit-scrollbar-thumb { background:var(--border); }
+.ir { display:flex; align-items:center; gap:12px; min-height:22px; }
+.ir-lbl { width:32px; flex-shrink:0; font-size:11px; color:var(--dim); text-align:right; letter-spacing:.04em; }
+.ir-val { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; color:var(--bright); }
+.ir-val.unk { color:var(--dim); font-family:'Share Tech Mono',monospace; font-weight:400; font-size:14px; }
+.ir-flag         { font-size:11px; margin-left:5px; letter-spacing:.04em; }
+.ir-flag.anomaly { color:#ffd040; }
+.ir-flag.intlp   { color:#ff6840; }
+.ir-flag.pos     { color:var(--green); }
+.ir-orig { font-size:10px; color:var(--dim); margin-left:4px; font-family:'Share Tech Mono',monospace; }
+.info-div { height:1px; background:var(--border); margin:2px 0; flex-shrink:0; }
+.h2o-dots { font-size:15px; letter-spacing:2px; line-height:1; }
+.h2o-dots .don { color:#4abaff; }
+.h2o-dots .dof { color:var(--dim); opacity:.4; }
+.eco-row { display:flex; gap:5px; flex-wrap:wrap; }
+.eco { font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700; padding:2px 6px; border-radius:2px; letter-spacing:.04em; }
+.eco-pt  { color:#c8b878; background:rgba(200,184,120,.12); border:1px solid rgba(200,184,120,.22); }
+.eco-fe  { color:#9c9a98; background:rgba(156,154,152,.12); border:1px solid rgba(156,154,152,.22); }
+.eco-h2o { color:#4abaff; background:rgba(74,186,255,.10); border:1px solid rgba(74,186,255,.22); }
+.eco-pgm { color:#d4b860; background:rgba(212,184,96,.15);  border:1px solid rgba(212,184,96,.30); }
+
+/* mode buttons */
+.info-actions {
+  flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px;
+  padding:8px 14px 12px; border-top:1px solid var(--border);
+}
+.info-btn {
+  flex:1; padding:8px 4px; border-radius:4px;
+  font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700;
+  letter-spacing:.1em; cursor:pointer; border:1px solid; text-align:center;
+  transition:background .15s, box-shadow .15s, opacity .15s;
+}
+.btn-stop  { color:var(--green);  border-color:rgba(70,200,70,.25);  background:transparent; }
+.btn-stop.active  { background:rgba(70,200,70,.20);  border-color:var(--green);  box-shadow:0 0 8px rgba(70,200,70,.3); }
+.btn-stop:hover   { background:rgba(70,200,70,.10); border-color:rgba(70,200,70,.5); }
+.btn-flyby { color:var(--yellow); border-color:rgba(216,152,32,.25); background:transparent; }
+.btn-flyby.active { background:rgba(216,152,32,.20); border-color:var(--yellow); box-shadow:0 0 8px rgba(216,152,32,.3); }
+.btn-flyby:hover  { background:rgba(216,152,32,.10); border-color:rgba(216,152,32,.5); }
+.btn-flyby.locked, .btn-stop.locked { opacity:.3; cursor:not-allowed; pointer-events:none; }
+.btn-next { color:var(--accent); border-color:rgba(26,110,208,.4); background:rgba(26,110,208,.08); }
+.btn-next:hover { background:rgba(26,110,208,.2); border-color:var(--accent); }
+.info-btn[disabled] { opacity:.25; cursor:default; }
+.info-hint { flex-basis:100%; font-size:9px; color:var(--dim); letter-spacing:.06em; text-align:center; }
+
+/* ── LEGEND ── */
+.legend-overlay {
+  position:fixed; inset:0; background:rgba(6,9,16,.92);
+  display:none; flex-direction:column; justify-content:center; align-items:center;
+  gap:14px; z-index:300; padding:24px; backdrop-filter:blur(4px);
+}
+.legend-overlay.visible { display:flex; }
+.leg-title { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:var(--bright); letter-spacing:.2em; }
+.leg-grid  { display:grid; grid-template-columns:auto 1fr; gap:8px 14px; align-items:center; width:100%; max-width:320px; }
+.leg-swatch { width:16px; height:16px; border-radius:50%; }
+.leg-swatch.stop-s  { border:2px solid var(--green); }
+.leg-swatch.flyby-s { border:2px dashed var(--yellow); }
+.leg-text { font-size:12px; color:var(--mid); }
+.leg-div  { grid-column:1/-1; height:1px; background:var(--border); margin:2px 0; }
+.leg-pie-row  { display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center; }
+.leg-pie-item { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--mid); }
+.leg-note { font-size:11px; color:var(--dim); text-align:center; line-height:1.8; max-width:300px; }
+.leg-close { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:.15em; color:var(--dim); border:1px solid var(--border); background:none; padding:9px 22px; border-radius:4px; cursor:pointer; }
+.leg-close:hover { color:var(--bright); border-color:var(--mid); }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; top:52px; left:50%; transform:translateX(-50%);
+  color:#fff; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
+  letter-spacing:.12em; padding:8px 16px; border-radius:4px;
+  pointer-events:none; opacity:0; transition:opacity .2s; white-space:nowrap; z-index:400;
+  background:rgba(208,48,48,.94);
+}
+.toast.go   { background:rgba(70,200,70,.94); color:#000; }
+.toast.show { opacity:1; }
+
+/* ── TOOLTIP ── */
+#tooltip {
+  position:fixed; pointer-events:none; z-index:100;
+  background:var(--surface); border:1px solid var(--accent);
+  color:var(--bright); font-family:'Share Tech Mono',monospace; font-size:12px;
+  padding:6px 10px; border-radius:4px; white-space:nowrap;
+  opacity:0; transition:opacity .15s; box-shadow:0 0 12px rgba(26,110,208,.3);
+}
+#tooltip.visible { opacity:1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header" id="header">
+    <button class="h-dry"   id="h-dry"   title="Suchá hmotnost 1–5">Dry&nbsp;3</button>
+    <button class="h-total" id="h-total" title="Celková hmotnost (klikni = více vody)">
+      Σ&nbsp;<span id="h-total-val">12</span>
+    </button>
+    <button class="h-pct"   id="h-pct">
+      <span id="h-pct-val" style="color:var(--green)">100%</span>
+    </button>
+    <div class="h-sep"></div>
+    <span class="h-time" id="h-time" style="color:var(--green)">0 min</span>
+    <span class="h-speed">V&nbsp;0.14</span>
+    <button class="h-legend-btn" id="leg-btn">?</button>
+  </div>
+  <div class="map-container" id="map-container">
+    <div class="map-inner" id="map">
+      <svg id="route-svg"></svg>
+      <div class="scroll-hint" id="scroll-hint">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- INFO CARD -->
+<div class="info-card" id="info-card">
+  <div class="info-handle"><div class="info-handle-bar"></div></div>
+  <div class="info-hdr">
+    <div class="info-badge" id="info-badge">S</div>
+    <div class="info-name"  id="info-name">—</div>
+    <button class="info-close" id="info-close">×</button>
+  </div>
+  <div class="info-surface"><canvas id="info-canvas"></canvas></div>
+  <div class="info-data"   id="info-data"></div>
+  <div class="info-actions">
+    <button class="info-btn btn-stop"  id="btn-stop">ZASTÁVKA</button>
+    <button class="info-btn btn-flyby" id="btn-flyby">⤳ PRŮLET</button>
+    <button class="info-btn btn-next"  id="btn-next" style="display:none">DÁLE ›</button>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend-overlay" id="leg-overlay">
+  <div class="leg-title">LEGENDA</div>
+  <div class="leg-grid">
+    <div class="leg-swatch" style="background:var(--S)"></div><div class="leg-text">S — silikit (olivin, pyroxen, PGM)</div>
+    <div class="leg-swatch" style="background:var(--C)"></div><div class="leg-text">C — uhlikatý, voda, He-3</div>
+    <div class="leg-swatch" style="background:var(--M)"></div><div class="leg-text">M — kov (Fe-Ni, PGM jackpot)</div>
+    <div class="leg-swatch" style="background:var(--V)"></div><div class="leg-text">V — bazalt, fragment Vesty</div>
+    <div class="leg-swatch" style="background:var(--E)"></div><div class="leg-text">E — enstatit, vysoké albedo</div>
+    <div class="leg-swatch" style="background:var(--D)"></div><div class="leg-text">D — tmavý, organický</div>
+    <div class="leg-div"></div>
+    <div class="leg-swatch stop-s"></div> <div class="leg-text">zastávka — plný stop</div>
+    <div class="leg-swatch flyby-s"></div><div class="leg-text">průlet — závisí na úhlu zahnutí</div>
+    <div class="leg-div"></div>
+  </div>
+  <div class="leg-pie-row">
+    <div class="leg-pie-item">
+      <svg width="22" height="22" viewBox="-11 -11 22 22">
+        <path d="M0,0 L10,0 A10,10,0,0,1,5,-8.66 Z" fill="#46c846" opacity=".75"/>
+        <circle r="10" fill="none" stroke="#46c846" stroke-width="1" opacity=".3"/>
+      </svg>levný průlet
+    </div>
+    <div class="leg-pie-item">
+      <svg width="22" height="22" viewBox="-11 -11 22 22">
+        <path d="M0,0 L10,0 A10,10,0,0,1,-10,0 Z" fill="#d89820" opacity=".75"/>
+        <circle r="10" fill="none" stroke="#d89820" stroke-width="1" opacity=".3"/>
+      </svg>střední obrat
+    </div>
+    <div class="leg-pie-item">
+      <svg width="22" height="22" viewBox="-11 -11 22 22">
+        <path d="M0,0 L10,0 A10,10,0,1,1,0,-10 Z" fill="#d03030" opacity=".75"/>
+        <circle r="10" fill="none" stroke="#d03030" stroke-width="1" opacity=".3"/>
+      </svg>drahý obrat
+    </div>
+  </div>
+  <div class="leg-note">
+    mapa: klik = zastávka → průlet → odebrat<br>
+    INFO panel: přepnutí zastávka ↔ průlet<br><br>
+    suché 1–5 · voda 1–9 → poměr 9:1 až 1:6<br>
+    Tsiolkovsky: lehčí loď = levnější manévry
+  </div>
+  <button class="leg-close" id="leg-close">ZAVŘÍT</button>
+</div>
+
+<div id="loading" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:999;font-family:'Orbitron',sans-serif;font-size:12px;color:var(--dim);letter-spacing:.15em">
+  <div style="color:var(--accent);font-size:18px;font-weight:700">HIGHFRONTIER</div>
+  NAČÍTÁM DATA Z DB…
+</div>
+<div class="toast" id="toast"></div>
+<div id="tooltip"></div>
+
+<script>
+// ── Physics ───────────────────────────────────────────────
+const VE=21, DV_STOP=2.0, DV_RETURN=1.0, SPEED=0.14;
+let dryLevel=3, waterLevel=1;
+const getDry =()=>dryLevel *100;
+const getWMax=()=>waterLevel*100;
+function fuelUsed(dv,w){ return (getDry()+w)*(1-Math.exp(-dv/VE)); }
+function costColor(dv){ return dv<0.5?'#46c846':dv<1.5?'#d89820':'#d03030'; }
+
+// ── Data ──────────────────────────────────────────────────
+// ── Supabase ──────────────────────────────────────────────
+const SB_URL = 'https://tfyuyylcygamglpdfudd.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmeXV5eWxjeWdhbWdscGRmdWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzQ4MzUsImV4cCI6MjA5NDc1MDgzNX0.YCxvjsi28xnT9nUMMX3ks_QFa9fEuXfqTASTup7hE5E';
+const SB_HDR = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
+
+const COLORS={S:'#c89836',C:'#60586a',E:'#d8d6d2',V:'#9c2e24',M:'#9c9a98',D:'#785040'};
+
+// Naplní se z DB při načtení
+const ASTEROIDS=[];
+const CATALOG={};
+const FLYBY={};
+const STOP={};
+
+async function fetchGameData() {
+  const res = await fetch(
+    `${SB_URL}/rest/v1/asteroids?select=*,asteroid_tier2(*),asteroid_tier3(*)&order=id`,
+    { headers: SB_HDR }
+  );
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  const rows = await res.json();
+
+  rows.forEach(a => {
+    // ASTEROIDS — mapa
+    ASTEROIDS.push({ id: a.id, name: a.name, type: a.spectral_type,
+                     x: a.x_pos, y: a.y_pos, r: a.r_size });
+
+    // CATALOG — Tier 1 (zachováváme interní jména z v6)
+    CATALOG[a.id] = {
+      albedo: a.albedo, diam: a.diameter_km, massStr: a.mass_str,
+      period: a.period_h, binary: a.has_satellite, structure: a.structure,
+      h2o: a.h2o_level, eco: a.eco || [],
+      interloper: a.is_interloper, fastRot: a.fast_rotation
+    };
+
+    // FLYBY — Tier 2
+    const t2 = a.asteroid_tier2?.[0];
+    if (t2) {
+      const raw = t2.anomalies || {};
+      FLYBY[a.id] = {
+        albedo: t2.albedo, diam: t2.diameter_km, massStr: t2.mass_str,
+        densStr: t2.density_str, period: t2.period_h, binary: t2.has_satellite,
+        structure: t2.structure, h2o: t2.h2o_level, eco: t2.eco || [],
+        mag: t2.magnetic,
+        // přemapujeme klíče DB → interní jména používaná v populateInfo
+        anomaly: {
+          albedo:  raw.albedo,
+          diam:    raw.diameter_km,
+          dens:    raw.density_str,
+          period:  raw.period_h,
+          binary:  raw.has_satellite,
+          h2o:     raw.h2o_level,
+          mag:     raw.magnetic,
+          eco:     raw.eco
+        }
+      };
+    }
+
+    // STOP — Tier 3
+    const t3 = a.asteroid_tier3?.[0];
+    if (t3) STOP[a.id] = {
+      minerals: t3.minerals, eco: t3.eco || [],
+      h2o: t3.h2o_level, special: t3.special
+    };
+  });
+}
+
+const BASE={x:6,y:11};
+let route=[];
+
+// ── Geometry ──────────────────────────────────────────────
+const pt=id=>id==='BASE'?BASE:ASTEROIDS.find(a=>a.id===id);
+const dist=(a,b)=>Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+function normalize(a,b){const l=Math.hypot(b.x-a.x,b.y-a.y);return l<.001?{x:0,y:0}:{x:(b.x-a.x)/l,y:(b.y-a.y)/l};}
+function dvFlyby(p,c,n){const v1=normalize(p,c),v2=normalize(c,n);return Math.hypot(v2.x-v1.x,v2.y-v1.y);}
+
+// ── Route calc ────────────────────────────────────────────
+function calcRoute(){
+  const WM=getWMax(),ids=['BASE',...route.map(r=>r.id),'BASE'];
+  let water=WM,totalDist=0;
+  const dvUnits=[],fuelCosts=[];
+  for(let i=0;i<ids.length-1;i++) totalDist+=dist(pt(ids[i]),pt(ids[i+1]));
+  for(let i=1;i<ids.length-1;i++){
+    const e=route[i-1];
+    const dv=e.mode==='stop'?DV_STOP:dvFlyby(pt(ids[i-1]),pt(ids[i]),pt(ids[i+1]));
+    dvUnits.push(dv);
+    const fuel=fuelUsed(dv,water);
+    fuelCosts.push({fuel:Math.round(fuel*10)/10,dv:Math.round(dv*100)/100,mode:e.mode});
+    water-=fuel;
+  }
+  water-=fuelUsed(DV_RETURN,Math.max(0,water));
+  return{water,totalDist,dvUnits,fuelCosts};
+}
+
+// ── Render ────────────────────────────────────────────────
+function render(){
+  const{water,totalDist,dvUnits,fuelCosts}=calcRoute();
+  const WM=getWMax();
+  const pct=Math.round(water/WM*100);
+  const pctEl=document.getElementById('h-pct-val');
+  pctEl.textContent=pct+'%';
+  pctEl.style.color=water<0?'var(--red)':water<WM*.15?'var(--yellow)':'var(--green)';
+  const hasRoute=route.length>0;
+  document.getElementById('h-pct').className='h-pct'+(hasRoute?(water>=0?' has-route':' negative'):'');
+  document.getElementById('h-total-val').textContent=dryLevel+waterLevel;
+  const min=Math.round(totalDist/SPEED);
+  const tEl=document.getElementById('h-time');
+  tEl.textContent=min+' min';
+  tEl.style.color=min<60?'var(--green)':min<120?'var(--yellow)':'var(--red)';
+  ASTEROIDS.forEach(a=>{
+    const el=document.getElementById('ab-'+a.id);
+    const badge=document.getElementById('badge-'+a.id);
+    const ri=route.findIndex(r=>r.id===a.id);
+    el.className='asteroid-btn'; badge.style.display='none';
+    if(ri!==-1){
+      el.classList.add('is-'+route[ri].mode);
+      badge.textContent=ri+1; badge.style.display='flex';
+      if(fuelCosts[ri]) badge.dataset.tip=`${fuelCosts[ri].mode==='stop'?'zastávka':'průlet'}  Δv=${fuelCosts[ri].dv}  H₂O=−${fuelCosts[ri].fuel}`;
+    }
+  });
+  drawLines(dvUnits);
+  if(currentInfoId) updateInfoBtns(currentInfoId);
+}
+
+// ── SVG ───────────────────────────────────────────────────
+function mapDims(){const e=document.getElementById('map');return{W:e.offsetWidth,H:e.offsetHeight};}
+function drawLines(dvUnits){
+  const svg=document.getElementById('route-svg');
+  const{W,H}=mapDims();
+  svg.querySelectorAll('.rl').forEach(e=>e.remove());
+  if(!route.length) return;
+  const toXY=p=>({x:p.x/100*W,y:p.y/100*H});
+  const ids=['BASE',...route.map(r=>r.id),'BASE'];
+  const pts=ids.map(id=>toXY(pt(id)));
+  for(let i=0;i<pts.length-1;i++){
+    const p1=pts[i],p2=pts[i+1],isRet=i===pts.length-2;
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',p1.x);ln.setAttribute('y1',p1.y);ln.setAttribute('x2',p2.x);ln.setAttribute('y2',p2.y);
+    let sc,sw;
+    if(flightMode&&!isRet){
+      if(i<flightIdx)      {sc='rgba(26,110,208,.18)';sw='1';}
+      else if(i===flightIdx){sc='rgba(220,70,50,.9)'; sw='2.2';}
+      else                  {sc='rgba(220,70,50,.30)';sw='1.5';}
+    } else {
+      sc=isRet?'rgba(26,110,208,.15)':'rgba(26,110,208,.5)';
+      sw=isRet?'1':'1.8';
+    }
+    ln.setAttribute('stroke',sc);
+    ln.setAttribute('stroke-width',sw);ln.setAttribute('class','rl');svg.appendChild(ln);
+    if(!isRet){
+      const ax=p1.x+(p2.x-p1.x)*.60,ay=p1.y+(p2.y-p1.y)*.60;
+      const arr=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      arr.setAttribute('points','0,-5 10,0 0,5');
+      arr.setAttribute('fill',route[i]&&route[i].mode==='stop'?'rgba(70,200,70,.7)':'rgba(90,160,220,.7)');
+      arr.setAttribute('transform',`translate(${ax},${ay}) rotate(${Math.atan2(p2.y-p1.y,p2.x-p1.x)*180/Math.PI})`);
+      arr.setAttribute('class','rl');svg.appendChild(arr);
+    }
+  }
+  for(let i=1;i<pts.length-1;i++){
+    const e=route[i-1],dv=dvUnits[i-1],cx=pts[i].x,cy=pts[i].y,R=15;
+    if(e.mode==='stop'){
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',R);
+      c.setAttribute('fill','rgba(70,200,70,.18)');c.setAttribute('stroke','#46c846');
+      c.setAttribute('stroke-width','1.2');c.setAttribute('class','rl');svg.appendChild(c);
+    } else {
+      if(dv<0.05) continue;
+      const ia=Math.atan2(pts[i].y-pts[i-1].y,pts[i].x-pts[i-1].x);
+      const oa=Math.atan2(pts[i+1].y-pts[i].y,pts[i+1].x-pts[i].x);
+      const x1=cx+R*Math.cos(ia),y1=cy+R*Math.sin(ia),x2=cx+R*Math.cos(oa),y2=cy+R*Math.sin(oa);
+      const v1x=pts[i].x-pts[i-1].x,v1y=pts[i].y-pts[i-1].y;
+      const v2x=pts[i+1].x-pts[i].x,v2y=pts[i+1].y-pts[i].y;
+      const cross=v1x*v2y-v1y*v2x;
+      const def=Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/(Math.hypot(v1x,v1y)*Math.hypot(v2x,v2y)))));
+      const col=costColor(dv);
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${def>Math.PI?1:0} ${cross>=0?1:0} ${x2} ${y2} Z`);
+      path.setAttribute('fill',col);path.setAttribute('opacity','0.58');path.setAttribute('class','rl');svg.appendChild(path);
+      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',cx);ring.setAttribute('cy',cy);ring.setAttribute('r',R);
+      ring.setAttribute('fill','none');ring.setAttribute('stroke',col);ring.setAttribute('stroke-width','1');
+      ring.setAttribute('opacity','0.25');ring.setAttribute('class','rl');svg.appendChild(ring);
+    }
+  }
+}
+
+// ── INFO card ─────────────────────────────────────────────
+let currentInfoId=null, hoverCloseTimer=null;
+
+function openInfo(id){
+  clearTimeout(hoverCloseTimer);
+  currentInfoId=id; populateInfo(id,'catalog');
+  document.getElementById('info-card').classList.add('visible');
+}
+function closeInfo(){
+  document.getElementById('info-card').classList.remove('visible');
+  currentInfoId=null;
+}
+
+// Close on any click outside the card
+document.addEventListener('click',e=>{
+  if(!document.getElementById('info-card').contains(e.target)) closeInfo();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeInfo(); });
+
+function drawSurface(canvas,type,seed){
+  const W=canvas.width=canvas.offsetWidth||390;
+  const H=canvas.height=canvas.offsetHeight||185;
+  const ctx=canvas.getContext('2d');
+  const cm={S:[168,138,72],C:[50,46,56],E:[224,218,210],V:[112,42,36],M:[140,138,136],D:[118,80,62]};
+  const[r,g,b]=cm[type]||[80,80,80];
+
+  // Space background
+  ctx.fillStyle='#020406'; ctx.fillRect(0,0,W,H);
+
+  // Background stars
+  let s=(seed||99991)>>>0;
+  const sr=()=>{s^=s<<13;s^=s>>17;s^=s<<5;return(s>>>0)/4294967296;};
+  for(let i=0;i<55;i++){
+    ctx.fillStyle=`rgba(180,210,240,${(sr()*.38+.05).toFixed(2)})`;
+    ctx.beginPath();ctx.arc(sr()*W,sr()*H,sr()*.8+.1,0,Math.PI*2);ctx.fill();
+  }
+
+  // Asteroid: oval, slight diagonal tilt
+  const cx=W*.47, cy=H*.50, rx=H*.40, ry=H*.34;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-0.22);
+
+  // Main body
+  const gBody=ctx.createRadialGradient(-rx*.28,-ry*.28,rx*.04,rx*.08,ry*.06,rx*1.18);
+  gBody.addColorStop(0,`rgb(${Math.min(r+85,255)},${Math.min(g+78,255)},${Math.min(b+62,255)})`);
+  gBody.addColorStop(.42,`rgb(${r},${g},${b})`);
+  gBody.addColorStop(1,`rgb(${Math.max(r-55,0)},${Math.max(g-50,0)},${Math.max(b-45,0)})`);
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle=gBody; ctx.fill();
+
+  // Terminator shadow (night side, bottom-right)
+  const gTerm=ctx.createRadialGradient(rx*.52,ry*.38,rx*.1,rx*.52,ry*.38,rx*1.08);
+  gTerm.addColorStop(0,'rgba(0,0,0,0)');
+  gTerm.addColorStop(.55,'rgba(0,0,0,0)');
+  gTerm.addColorStop(1,'rgba(0,0,0,.70)');
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle=gTerm; ctx.fill();
+
+  // Limb darkening
+  const gLimb=ctx.createRadialGradient(0,0,rx*.52,0,0,rx*1.01);
+  gLimb.addColorStop(0,'rgba(0,0,0,0)');
+  gLimb.addColorStop(.72,'rgba(0,0,0,0)');
+  gLimb.addColorStop(1,'rgba(0,0,0,.65)');
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle=gLimb; ctx.fill();
+
+  ctx.restore();
+
+  // Scanlines
+  ctx.fillStyle='rgba(0,0,0,.07)';
+  for(let y=0;y<H;y+=2) ctx.fillRect(0,y,W,1);
+
+  // Placeholder label
+  ctx.fillStyle='rgba(80,120,150,.38)'; ctx.font='9px "Share Tech Mono",monospace'; ctx.textAlign='center';
+  ctx.fillText('· TIER 3 FLYBY REQUIRED ·',W/2,H-8);
+}
+
+function h2oDots(n){return Array.from({length:4},(_,i)=>`<span class="${i<n?'don':'dof'}">${i<n?'●':'○'}</span>`).join('');}
+function ecoHTML(eco){
+  if(!eco.length) return '<span class="ir-val unk">—</span>';
+  const cls={Pt:'eco-pt',Fe:'eco-fe','H₂O':'eco-h2o',PGM:'eco-pgm'};
+  return '<div class="eco-row">'+eco.map(e=>`<span class="eco ${cls[e]||'eco-pt'}">${e}</span>`).join('')+'</div>';
+}
+
+function val(flybyVal, catVal, anomalyMsg){
+  // Returns HTML for a data row value: flyby value + (catalog in brackets) + anomaly flag
+  const isNew = catVal==null;
+  const flag  = anomalyMsg ? `<span class="ir-flag anomaly">${anomalyMsg}</span>` : '';
+  const orig  = isNew ? `<span class="ir-orig">nové</span>` : `<span class="ir-orig">(${catVal})</span>`;
+  return `<span class="ir-val">${flybyVal}</span>${orig}${flag}`;
+}
+
+function populateInfo(id, tier='catalog'){
+  const a   = ASTEROIDS.find(x=>x.id===id);
+  const cat = CATALOG[id];
+  const fly = FLYBY[id];
+  const stp = STOP[id];
+  const isFly  = tier==='flyby';
+  const isStop = tier==='stop';
+  const data   = isFly||isStop ? fly : cat;
+
+  const badge=document.getElementById('info-badge');
+  badge.textContent=a.type;
+  badge.style.background=COLORS[a.type]||'#888';
+  badge.style.color=['E','M'].includes(a.type)?'rgba(0,0,0,.7)':'rgba(0,0,0,.55)';
+
+  // Flight tier label in name
+  const tierLabel = isFly?' <span style="font-size:9px;color:var(--accent);letter-spacing:.1em">TIER 2 · PRŮLET</span>'
+                  : isStop?' <span style="font-size:9px;color:var(--yellow);letter-spacing:.1em">TIER 3 · ZASTÁVKA</span>':'' ;
+  document.getElementById('info-name').innerHTML=a.name+tierLabel;
+
+  const cv=document.getElementById('info-canvas');
+  requestAnimationFrame(()=>drawSurface(cv,a.type,id*1301));
+  const dKm=Math.round(dist(BASE,a)*45);
+  const albX=cat.albedo!=null&&(cat.albedo>0.40||cat.albedo<0.09);
+  let html='';
+
+  // albedo
+  if(isFly||isStop){
+    html+=`<div class="ir"><span class="ir-lbl">alb</span>${val(fly.albedo.toFixed(3), cat.albedo?.toFixed(3)||null, fly.anomaly?.albedo)}</div>`;
+  } else {
+    html+=`<div class="ir"><span class="ir-lbl">alb</span>
+      <span class="ir-val${cat.albedo==null?' unk':''}">${cat.albedo!=null?cat.albedo.toFixed(3):'?'}</span>
+      ${cat.interloper?'<span class="ir-flag intlp">⚡ INTERLOPER</span>':albX?'<span class="ir-flag anomaly">⚡</span>':''}</div>`;
+  }
+
+  // diam
+  if(isFly||isStop){
+    html+=`<div class="ir"><span class="ir-lbl">Ø</span>${val(fly.diam+' km', cat.diam?cat.diam+' km':null, fly.anomaly?.diam)}</div>`;
+  } else {
+    html+=`<div class="ir"><span class="ir-lbl">Ø</span><span class="ir-val${!cat.diam?' unk':''}">${cat.diam?cat.diam+' km':'?'}</span></div>`;
+  }
+
+  // mass + density
+  if(isFly||isStop){
+    html+=`<div class="ir"><span class="ir-lbl">m</span>${val('~'+fly.massStr+' kg', cat.massStr?'~'+cat.massStr+' kg':null, null)}</div>`;
+    html+=`<div class="ir"><span class="ir-lbl">ρ</span>${val(fly.densStr, null, fly.anomaly?.dens)}</div>`;
+  } else {
+    html+=`<div class="ir"><span class="ir-lbl">m</span><span class="ir-val${!cat.massStr?' unk':''}">${cat.massStr?'~'+cat.massStr+' kg':'?'}</span></div>`;
+  }
+
+  html+=`<div class="ir"><span class="ir-lbl">→</span><span class="ir-val">${dKm} km</span></div>`;
+  html+='<div class="info-div"></div>';
+
+  // rotation
+  if(isFly||isStop){
+    html+=`<div class="ir"><span class="ir-lbl">↻</span>${val(fly.period+' h', cat.period?cat.period+' h':null, fly.anomaly?.period)}</div>`;
+  } else {
+    html+=`<div class="ir"><span class="ir-lbl">↻</span>
+      <span class="ir-val${!cat.period?' unk':''}">${cat.period?cat.period+' h':'?'}</span>
+      ${cat.fastRot?'<span class="ir-flag anomaly">⚡ YORP?</span>':''}</div>`;
+  }
+
+  // binary
+  const bVal = data.binary;
+  html+=`<div class="ir"><span class="ir-lbl">⊕⊕</span>
+    <span class="ir-val${!bVal?' unk':''}">${bVal?'ANO':'—'}</span>
+    ${bVal?`<span class="ir-flag pos">${(isFly||isStop)&&fly.anomaly?.binary?fly.anomaly.binary:'⚡'}</span>`:''}</div>`;
+
+  // structure
+  html+=`<div class="ir"><span class="ir-lbl">◈</span><span class="ir-val${data.structure==='?'?' unk':''}">${data.structure}</span></div>`;
+
+  // mag (flyby only)
+  if((isFly||isStop)&&fly.mag){
+    html+=`<div class="ir"><span class="ir-lbl">⊗</span><span class="ir-val">ANO</span><span class="ir-flag anomaly">${fly.anomaly?.mag||'⚡'}</span></div>`;
+  }
+
+  html+='<div class="info-div"></div>';
+
+  // H2O
+  const h2oVal = (isFly||isStop) ? fly.h2o : cat.h2o;
+  const h2oFlag = (isFly||isStop)&&fly.anomaly?.h2o ? `<span class="ir-flag anomaly">${fly.anomaly.h2o}</span>` : '';
+  html+=`<div class="ir"><span class="ir-lbl">H₂O</span><span class="h2o-dots">${h2oDots(h2oVal)}</span>${h2oFlag}</div>`;
+
+  // eco
+  const ecoVal = (isFly||isStop) ? fly.eco : cat.eco;
+  const ecoFlag = (isFly||isStop)&&fly.anomaly?.eco ? `<span class="ir-flag anomaly">${fly.anomaly.eco}</span>` : '';
+  html+=`<div class="ir"><span class="ir-lbl">⬡</span>${ecoHTML(ecoVal)}${ecoFlag}</div>`;
+
+  // Tier 3 — minerals + special
+  if(isStop){
+    html+='<div class="info-div"></div>';
+    html+=`<div class="ir" style="flex-wrap:wrap"><span class="ir-lbl">min</span><span style="font-size:11px;color:var(--mid);line-height:1.5">${stp.minerals}</span></div>`;
+    if(stp.special){
+      html+=`<div class="ir" style="margin-top:4px"><span class="ir-lbl"></span><span style="font-size:12px;font-family:'Orbitron',sans-serif;font-weight:700;color:#ffd040;letter-spacing:.04em">${stp.special}</span></div>`;
+    }
+  }
+
+  document.getElementById('info-data').innerHTML=html;
+  updateInfoBtns(id);
+}
+
+function updateInfoBtns(id){
+  const idx=route.findIndex(r=>r.id===id);
+  const mode=idx>=0?route[idx].mode:null;
+  const stopBtn =document.getElementById('btn-stop');
+  const flybyBtn=document.getElementById('btn-flyby');
+  stopBtn.classList.toggle('active', mode==='stop');
+  flybyBtn.classList.toggle('active',mode==='flyby');
+  // In flight: lock the OTHER button only AFTER player confirmed a choice
+  if(flightMode && flightConfirmed){
+    if(mode==='stop')  document.getElementById('btn-flyby').classList.add('locked');
+    else               document.getElementById('btn-stop').classList.add('locked');
+  } else {
+    document.getElementById('btn-stop').classList.remove('locked');
+    document.getElementById('btn-flyby').classList.remove('locked');
+  }
+}
+
+// ── INFO buttons ──────────────────────────────────────────
+// Planning mode: always available; sets/changes mode; if not in route → adds first
+// Flight mode: confirms choice and advances
+document.getElementById('btn-stop').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!currentInfoId) return;
+  if(flightMode){ flightConfirm('stop'); return; }
+  const idx=route.findIndex(r=>r.id===currentInfoId);
+  if(idx===-1) route.push({id:currentInfoId,mode:'stop'});
+  else route[idx].mode='stop';
+  render(); updateInfoBtns(currentInfoId);
+});
+document.getElementById('btn-flyby').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!currentInfoId) return;
+  if(flightMode){ flightConfirm('flyby'); return; }
+  const idx=route.findIndex(r=>r.id===currentInfoId);
+  if(idx===-1) route.push({id:currentInfoId,mode:'flyby'});
+  else route[idx].mode='flyby';
+  render(); updateInfoBtns(currentInfoId);
+});
+document.getElementById('btn-next').addEventListener('click',e=>{ e.stopPropagation(); flightNext(); });
+document.getElementById('info-close').addEventListener('click',e=>{ e.stopPropagation(); closeInfo(); });
+
+// ── Header ────────────────────────────────────────────────
+document.getElementById('h-dry').addEventListener('click',()=>{
+  if(flightMode) return;
+  dryLevel=dryLevel>=5?1:dryLevel+1;
+  document.getElementById('h-dry').textContent='Dry\u00a0'+dryLevel; render();
+});
+document.getElementById('h-total').addEventListener('click',()=>{
+  if(flightMode) return;
+  waterLevel=waterLevel>=9?1:waterLevel+1; render();
+});
+document.getElementById('h-pct').addEventListener('click',()=>{
+  if(flightMode||!route.length||calcRoute().water<0) return;
+  startFlight();
+});
+
+// ── Legend ────────────────────────────────────────────────
+document.getElementById('leg-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  document.getElementById('leg-overlay').classList.add('visible');
+  document.getElementById('leg-btn').classList.add('active');
+});
+['leg-close','leg-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(id==='leg-overlay'&&e.target!==e.currentTarget) return;
+    document.getElementById('leg-overlay').classList.remove('visible');
+    document.getElementById('leg-btn').classList.remove('active');
+  });
+});
+
+// ── Flight phase ──────────────────────────────────────────
+let flightMode=false, flightIdx=0, flightConfirmed=false;
+
+function startFlight(){
+  flightMode=true; flightIdx=0;
+  document.getElementById('header').classList.add('flight-mode');
+  // hide map route buttons from asteroid clicks
+  showToast('GO! ▶',true);
+  setTimeout(()=>flightShowWaypoint(),600);
+}
+
+function flightShowWaypoint(){
+  if(flightIdx>=route.length){ flightEnd(); return; }
+  const id=route[flightIdx].id;
+  currentInfoId=id;
+  flightConfirmed=false;   // reset — both buttons available on arrival
+  populateInfo(id,'flyby');
+  document.getElementById('btn-next').style.display='flex';
+  document.getElementById('info-close').style.display='none';
+  document.getElementById('info-card').classList.add('visible');
+}
+
+function flightConfirm(mode){
+  flightConfirmed=true;    // lock the other button from now
+  const idx=route.findIndex(r=>r.id===currentInfoId);
+  if(idx>=0) route[idx].mode=mode;
+  populateInfo(currentInfoId, mode==='stop'?'stop':'flyby');
+  render(); updateInfoBtns(currentInfoId);
+}
+
+function flightNext(){
+  flightConfirmed=false;
+  flightIdx++;
+  closeInfo();
+  setTimeout(()=>flightShowWaypoint(),300);
+}
+
+function flightEnd(){
+  flightMode=false;
+  document.getElementById('header').classList.remove('flight-mode');
+  document.getElementById('btn-next').style.display='none';
+  document.getElementById('info-close').style.display='flex';
+  closeInfo();
+  showToast('Mise dokončena',true);
+}
+
+// ── Toast ─────────────────────────────────────────────────
+let toastT;
+function showToast(msg,isGo=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(isGo?' go':'')+' show';
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ── Tooltip ───────────────────────────────────────────────
+const tip=document.getElementById('tooltip');
+document.addEventListener('mouseover',e=>{
+  const b=e.target.closest('.a-badge');
+  if(b&&b.dataset.tip){tip.textContent=b.dataset.tip;tip.classList.add('visible');}
+});
+document.addEventListener('mouseout',e=>{ if(e.target.closest('.a-badge')) tip.classList.remove('visible'); });
+document.addEventListener('mousemove',e=>{ if(tip.classList.contains('visible')){tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-32)+'px';} });
+
+// ── Init ──────────────────────────────────────────────────
+function initStars(){
+  const{W,H}=mapDims();const svg=document.getElementById('route-svg');
+  for(let i=0;i<220;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',Math.random()*W);c.setAttribute('cy',Math.random()*H);
+    c.setAttribute('r',Math.random()*1.5+0.15);
+    c.setAttribute('fill',`rgba(170,200,230,${(Math.random()*.45+.06).toFixed(2)})`);
+    svg.appendChild(c);
+  }
+}
+function initBase(){
+  const map=document.getElementById('map');
+  const el=document.createElement('div');
+  el.className='base-el';el.style.left=BASE.x+'%';el.style.top=BASE.y+'%';
+  el.innerHTML=`<svg width="34" height="34" viewBox="0 0 34 34">
+    <polygon points="17,3 31,30 3,30" fill="none" stroke="#1a6ed0" stroke-width="1.5"/>
+    <polygon points="17,11 26,28 8,28" fill="#1a6ed0" opacity="0.18"/>
+    <text x="17" y="23" text-anchor="middle" font-size="6" fill="#5aadff"
+      font-family="Orbitron,monospace" font-weight="700" letter-spacing="0.25">BASE</text>
+  </svg>`;
+  map.appendChild(el);
+}
+function initAsteroids(){
+  const map=document.getElementById('map');
+  ASTEROIDS.forEach(a=>{
+    const el=document.createElement('div');
+    el.className='asteroid-btn';el.id='ab-'+a.id;
+    el.style.left=a.x+'%';el.style.top=a.y+'%';
+    const d=a.r*2;
+    el.innerHTML=`
+      <div class="a-ring" style="width:${d}px;height:${d}px;background:${COLORS[a.type]||'#888'}">
+        <span class="a-type">${a.type}</span>
+        <div class="a-badge" id="badge-${a.id}"></div>
+      </div>
+      <div class="a-label">${a.name}</div>`;
+
+    // Hover → open INFO after 2s, skip if hovering badge
+    let hoverT;
+    el.addEventListener('mouseenter',e=>{
+      if(e.target.closest('.a-badge')) return;
+      clearTimeout(hoverCloseTimer);
+      hoverT=setTimeout(()=>{ if(!flightMode) openInfo(a.id); },2000);
+    });
+    el.addEventListener('mouseleave',()=>{
+      clearTimeout(hoverT);
+      hoverCloseTimer=setTimeout(closeInfo,700);
+    });
+
+    // Click → toggle in route (add as stop / remove); mode unchanged
+    el.addEventListener('click',e=>{
+      if(flightMode) return;
+      if(e.target.closest('.a-badge')) return; // badge shows tooltip, not route action
+      const idx=route.findIndex(r=>r.id===a.id);
+      if(idx===-1) route.push({id:a.id,mode:'stop'});
+      else          route.splice(idx,1);
+      render();
+    });
+    map.appendChild(el);
+  });
+}
+
+// Keep INFO open while hovering panel
+const infoCard=document.getElementById('info-card');
+infoCard.addEventListener('mouseenter',()=>clearTimeout(hoverCloseTimer));
+infoCard.addEventListener('mouseleave',()=>{ if(!flightMode) hoverCloseTimer=setTimeout(closeInfo,700); });
+
+// Click outside info-card → close (planning mode only)
+document.addEventListener('click',e=>{
+  if(!flightMode&&!infoCard.contains(e.target)) closeInfo();
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!flightMode) closeInfo(); });
+
+document.getElementById('map-container').addEventListener('scroll',()=>{
+  document.getElementById('scroll-hint').style.display='none';
+},{once:true});
+
+window.addEventListener('DOMContentLoaded', async ()=>{
+  const loading = document.getElementById('loading');
+  try {
+    await fetchGameData();
+  } catch(e) {
+    loading.textContent = '⚠ Chyba připojení k DB: ' + e.message;
+    return;
+  }
+  loading.style.display = 'none';
+  initStars(); initBase(); initAsteroids(); render();
+});
+window.addEventListener('resize',()=>{ drawLines(calcRoute().dvUnits); });
+</script>
+</body>
+</html>
