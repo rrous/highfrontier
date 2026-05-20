@@ -1,14 +1,39 @@
 # HighFrontier — Database Design Document
-## Backend pro 10k Flora asteroid pole
+## Backend pro Flora asteroid pole
 
-> Stav: Draft v0.1 · Cíl: Supabase / PostgreSQL · Doplněk k `highfrontier_poc_design_v04.md` (sekce 6–7)  
-> Tento dokument definuje **obsah** DB — schéma, indexy a API jdou v navazujícím chatu.
+> Stav: v0.2 · Cíl: Supabase / PostgreSQL · Doplněk k `highfrontier_poc_design_v04.md` (sekce 6–7)  
+> Tento dokument definuje **obsah** DB. Sekce 0 popisuje skutečně nasazený stav.
+
+---
+
+## 0. Stav implementace (2026-05-20)
+
+Pipeline (`pipeline/fetch_flora.py`) vygenerovala katalog `raw_data/flora_full.json`
+a data jsou nahraná v Supabase. Skutečný stav se v několika bodech liší od
+původního návrhu v0.1 níže:
+
+| Položka | Návrh v0.1 | Skutečnost |
+|---|---|---|
+| Počet těles | 10 000 (cíl) | **13 786** |
+| Schéma | nerozhodnuto (sekce 9) | 3 ploché tabulky: `asteroids`, `asteroid_tier2`, `asteroid_tier3` |
+| Composition | JSONB blob (návrh) | `asteroid_tier3.minerals` jako textový řetězec |
+| Tier model | T1/T2/T3 jako sloupce/null | jedna tabulka per tier, FK `asteroid_id` → `asteroids.id` |
+
+**Datový tok:** `flora_full.json` → `pipeline/transform_to_db.py` (ETL adaptér,
+mapuje vědecký katalog na schéma route planneru) → Supabase. Migrace schématu je
+v `pipeline/migration_route_planner.sql`, proximity dotaz pro klienta v
+`pipeline/rpc_nearby_asteroids.sql` (funkce `nearby_asteroids` — vrátí tělesa
+v zadaném dosahu, seřazená podle 3D delta-v, strop 100).
+
+**Pozor:** kalibrační cíle (sekce 3, 7, 8) byly laděné na 10 000 těles. Při
+13 786 tělesech jsou absolutní počty rare finds a užitečných těles odpovídajícím
+způsobem vyšší; procenta zhruba platí. Přeladění je otevřený bod (sekce 9).
 
 ---
 
 ## 1. Účel a kontext
 
-Backend DB drží 10 000 asteroidů Flora regionu. Klient (HTML/Godot) si přes API stahuje scény (5–100 těles dle souřadnic) a postupně odhaluje data podle Tier mechanismu:
+Backend DB drží 13 786 asteroidů Flora regionu. Klient (HTML/Godot) si přes API stahuje scény (max 100 těles dle souřadnic — funkce `nearby_asteroids`) a postupně odhaluje data podle Tier mechanismu:
 
 ```
 Tier 1 (katalog)   = co JPL/WISE skutečně ví → některá pole null
@@ -55,20 +80,24 @@ Tier 3 (zastávka)  = mineralogie + rare finds
 
 ## 4. Spektrální distribuce ve Flora poli
 
-Zdroj: pozorovaná distribuce v inner main belt (DeMeo & Carry 2013) + Flora dynamika (Nesvorný 2015).
+Zdroj: pozorovaná distribuce v inner main belt (DeMeo & Carry 2013) + Flora dynamika (Nesvorný 2015). Sloupec „Skutečnost" = vygenerovaný katalog `flora_full.json`.
 
-| Třída | Podíl | Počet z 10k | Poznámka |
+| Třída | Cílový podíl | Skutečnost (13 786) | Poznámka |
 |---|---|---|---|
-| S | 70% | 7 000 | Flora family core, LL/L chondrity |
-| C / Ch | 13% | 1 300 | nejčastější interloper v inner belt |
-| V | 5% | 500 | Vesta fragmenty (Flora je sousední rodina) |
-| D | 4% | 400 | tmavé, organické — vzácné v inner belt, ale možné |
-| M (X-komplex) | 2% | 200 | kovová tělesa, vzácná |
-| E (X-komplex) | 2% | 200 | enstatit, Hungaria-like interloper |
-| P (X-komplex) | 2% | 200 | mezi C a D, primitivní |
-| K | 1% | 100 | Eos-like interloper |
-| Unknown/jiné | 1% | 100 | nezařaditelné, hráč objeví Tier 2 |
-| **Σ** | **100%** | **10 000** | |
+| S | 70% | 9 724 (70.5%) | Flora family core, LL/L chondrity |
+| C / Ch | 13% | 1 612 (11.7%) | nejčastější interloper v inner belt |
+| V | 5% | 664 (4.8%) | Vesta fragmenty (Flora je sousední rodina) |
+| D | 4% | 500 (3.6%) | tmavé, organické — vzácné v inner belt, ale možné |
+| M (X-komplex) | 2% | 402 (2.9%) | kovová tělesa, vzácná |
+| E (X-komplex) | 2% | 299 (2.2%) | enstatit, Hungaria-like interloper |
+| P (X-komplex) | 2% | 242 (1.8%) | mezi C a D, primitivní |
+| K | 1% | 180 (1.3%) | Eos-like interloper |
+| U (Unknown) | 1% | 163 (1.2%) | nezařaditelné, hráč objeví Tier 2 |
+| **Σ** | **100%** | **13 786** | |
+
+> `spectral_type` v tabulce `asteroids` má check constraint na těchto 9 hodnot
+> (`S, C, M, V, E, D, P, K, U`). Klient (route planner) má pro všech 9 typů
+> barvu a legendu.
 
 ---
 
@@ -378,22 +407,53 @@ Hráč se postupně naučí:
 
 ---
 
-## 9. Otevřené otázky pro schema
+## 9. Rozhodnuté a otevřené body
 
-Po validaci obsahu jdeme do schémat. Otázky které zafixují strukturu tabulek:
+### 9.1 Rozhodnuto (implementováno)
 
-1. **Composition uložit jako řádky (normalizace) nebo JSONB blob?**  
-   Normalizace = pomalejší read, snadnější agregace; JSONB = rychlý fetch celého asteroidu jedním řádkem, špatně se filtruje "kde Pt > 0.01%". Pro heavy-read API doporučuji **JSONB blob v `asteroids.composition`** a separátní tabulku jen pro indexované resource_id (pro filtry typu "find asteroids with water > 5%").
+- **Schéma:** 3 ploché tabulky `asteroids` / `asteroid_tier2` / `asteroid_tier3`,
+  FK přes `asteroid_id`. Composition se neukládá jako JSONB blob ani jako řádky,
+  ale jako čitelný textový řetězec v `asteroid_tier3.minerals`.
+- **Rare finds:** nemají vlastní tabulku — promítají se do `asteroid_tier3.special`
+  a `eco`. (Pokud bude potřeba filtrovat „kde je find X", bude nutná samostatná
+  tabulka — viz 9.2.)
+- **Pozice / API scény:** tělesa mají souřadnice v proper-element rychlostním
+  prostoru (`x_pos`, `y_pos`, `z_pos`; m/s). Klient si scénu stahuje funkcí
+  `nearby_asteroids(qx, qy, qz, radius, max_n)` — max 100 těles seřazených podle
+  3D delta-v.
 
-2. **Rare finds: vždycky tabulka, nebo součást composition JSONB?**  
-   Tabulka, protože většina asteroidů nemá žádný rare find — řídká reprezentace je vhodnější.
+### 9.2 Otevřené body
 
-3. **Shape model URI:** pro ~100 backbone těles s DAMIT modelem — uložit URL na DAMIT, lokálně cachovat OBJ soubory v Supabase Storage, nebo nic (klient si stáhne přímo z DAMIT)?
+1. **Bezpečnost klíčů (vysoká priorita).**
+   - Legacy `service_role` JWT klíč byl natvrdo v `fetch_flora.py` a zůstává
+     v git historii — nutno revokovat / zakázat legacy klíče v Supabase.
+   - `hf_route_planner_API.html` používá legacy `anon` JWT klíč; po zakázání
+     legacy klíčů ho je třeba vyměnit za nový **publishable** klíč.
 
-4. **Time evolution:** orbitální elementy jsou statické (epocha JPL = mid 2020s); pro Tier 2 výpočty (mass z gravitační perturbace průletu) jsou potřeba aktuální pozice. Server počítá z elementů + `t`, nebo má batch job s aktuálními x,y,z?
+2. **Kalibrace na 13 786 těles.** Cíle v sekcích 3, 7, 8 byly počítané pro
+   10 000. Procenta zhruba platí, absolutní počty je vhodné přepočítat.
 
-5. **API caching:** scéna 100 asteroidů ≈ 100 × ~5KB JSON = 500 KB response. Cache na Supabase edge / CDN, nebo bez cache?
+3. **Konstanty ceny trasy v klientovi.** `SPEED`, `DV_STOP`, `DV_RETURN`,
+   `fuelUsed` v route planneru počítají v procentním prostoru mapy — po přechodu
+   na rychlostní souřadnice je třeba je přeladit na škálu delta-v (herní balance).
+
+4. **Filtrovatelnost rare finds.** Pokud má hra umět dotaz „najdi tělesa
+   s nálezem X", samotný textový `special` nestačí — bude potřeba indexovaná
+   tabulka nebo JSONB.
+
+5. **Shape model URI:** pro backbone tělesa s DAMIT modelem — URL na DAMIT,
+   cache OBJ v Supabase Storage, nebo nic. (Neřešeno.)
+
+6. **Time evolution:** orbitální elementy jsou statické; rychlostní souřadnice
+   nemají orbitální fázi. Pro pohyb těles v čase chybí model.
+
+7. **API caching:** scéna ~100 těles ≈ 500 KB JSON. Cache na edge / CDN?
+
+8. **Nový HTML klient (další chat):** rozdělit současný monolitický
+   `hf_route_planner_API.html` na oddělený design a logiku; cíl použitelnost
+   na PC i mobilu.
 
 ---
 
-*v0.1 — 2026-05-18 — výchozí návrh: resource catalog (52 položek), composition templates (8 tříd), rare finds matrix (18 nálezů), užitečnostní rozvaha*
+*v0.1 — 2026-05-18 — výchozí návrh: resource catalog (52 položek), composition templates (8 tříd), rare finds matrix (18 nálezů), užitečnostní rozvaha*  
+*v0.2 — 2026-05-20 — sekce 0 (stav implementace): nasazeno 13 786 těles, 3-tabulkové schéma, ETL + RPC; aktualizována distribuce a otevřené body*
