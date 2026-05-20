@@ -16,7 +16,26 @@ ALTER TABLE asteroids ADD COLUMN IF NOT EXISTS z_pos numeric;
 ALTER TABLE asteroids ALTER COLUMN id DROP IDENTITY IF EXISTS;
 ALTER TABLE asteroids ALTER COLUMN id DROP DEFAULT;
 
--- 3) Remove the 12 hand-made demo rows.
+-- 3) Widen real-valued columns to numeric.
+--    The hand-made demo rows used whole numbers, so several physical columns
+--    were created as integer. The full catalog carries fractional values
+--    (e.g. h_mag 18.2, albedo 0.24, positions in velocity space), which a
+--    numeric column accepts without loss. integer -> numeric is a safe widen.
+ALTER TABLE asteroids ALTER COLUMN x_pos       TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN y_pos       TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN r_size      TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN albedo      TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN diameter_km TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN period_h    TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN a_au        TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN e           TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN i_deg       TYPE numeric;
+ALTER TABLE asteroids ALTER COLUMN h_mag       TYPE numeric;
+ALTER TABLE asteroid_tier2 ALTER COLUMN albedo      TYPE numeric;
+ALTER TABLE asteroid_tier2 ALTER COLUMN diameter_km TYPE numeric;
+ALTER TABLE asteroid_tier2 ALTER COLUMN period_h    TYPE numeric;
+
+-- 4) Remove the 12 hand-made demo rows.
 --    REQUIRED: demo id=8 collides with the real asteroid (8) Flora.
 TRUNCATE asteroids, asteroid_tier2, asteroid_tier3 RESTART IDENTITY CASCADE;
 
