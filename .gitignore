@@ -8,3 +8,4 @@ dist/
 build/
 .env
 raw_data/*.json
+!raw_data/flora_full.json
