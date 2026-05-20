@@ -383,27 +383,33 @@ const FLYBY={};
 const STOP={};
 
 async function fetchGameData() {
-  // URL parametry: ?a_min=2.17&a_max=2.33&limit=50
+  // URL parametry: ?x=420&y=1100&z=1300&radius=600
   const params = new URLSearchParams(window.location.search);
-  const aMin  = parseFloat(params.get('a_min'))  || null;
-  const aMax  = parseFloat(params.get('a_max'))  || null;
-  const limit = parseInt(params.get('limit'))    || 50;
+  const qx     = parseFloat(params.get('x'))      || 0;
+  const qy     = parseFloat(params.get('y'))      || 0;
+  const qz     = parseFloat(params.get('z'))      || 0;
+  const radius = parseFloat(params.get('radius')) || 1000;
 
-  // Sestavení filtru pro Supabase (sloupec a_au, PostgREST syntax)
-  let filter = `select=*&order=id&limit=${limit}`;
-  if (aMin !== null) filter += `&a_au=gte.${aMin}`;
-  if (aMax !== null) filter += `&a_au=lte.${aMax}`;
+  // Proximity dotaz: nejbližší tělesa v dosahu, max 100 (server-side RPC).
+  const r1 = await fetch(`${SB_URL}/rest/v1/rpc/nearby_asteroids`, {
+    method: 'POST',
+    headers: { ...SB_HDR, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qx, qy, qz, radius, max_n: 100 }),
+  });
+  if (!r1.ok) throw new Error(`nearby_asteroids ${r1.status}`);
+  const asteroids = await r1.json();
 
-  const [r1, r2, r3] = await Promise.all([
-    fetch(`${SB_URL}/rest/v1/asteroids?${filter}`,     { headers: SB_HDR }),
-    fetch(`${SB_URL}/rest/v1/asteroid_tier2?select=*`, { headers: SB_HDR }),
-    fetch(`${SB_URL}/rest/v1/asteroid_tier3?select=*`, { headers: SB_HDR }),
+  // tier2/tier3 jen pro vrácená tělesa
+  if (asteroids.length === 0) return;
+  const idList = `(${asteroids.map(a => a.id).join(',')})`;
+  const [r2, r3] = await Promise.all([
+    fetch(`${SB_URL}/rest/v1/asteroid_tier2?select=*&asteroid_id=in.${idList}`, { headers: SB_HDR }),
+    fetch(`${SB_URL}/rest/v1/asteroid_tier3?select=*&asteroid_id=in.${idList}`, { headers: SB_HDR }),
   ]);
-  if (!r1.ok) throw new Error(`asteroids ${r1.status}`);
   if (!r2.ok) throw new Error(`tier2 ${r2.status}`);
   if (!r3.ok) throw new Error(`tier3 ${r3.status}`);
 
-  const [asteroids, tier2, tier3] = await Promise.all([r1.json(), r2.json(), r3.json()]);
+  const [tier2, tier3] = await Promise.all([r2.json(), r3.json()]);
 
   // indexy pro rychlý lookup
   const t2idx = Object.fromEntries(tier2.map(t => [t.asteroid_id, t]));
