@@ -247,8 +247,10 @@ class TestTier3Composition:
 
     def test_porosity_range(self, asteroids):
         for a in asteroids:
-            p = _t3(a)["porosity"]
-            assert 0.0 <= p <= 0.80, f"Porosity {p} out of physical range [0, 0.8]"
+            p = _t2(a)["macro_porosity"]
+            assert 0.0 <= p <= 0.80, f"macro_porosity {p} out of physical range [0, 0.8]"
+            mp = _t3(a)["micro_porosity"]
+            assert 0.0 <= mp <= 0.15, f"micro_porosity {mp} out of physical range [0, 0.15]"
 
 
 class TestRareFinds:
@@ -490,8 +492,8 @@ class TestDataIntegrity:
     def test_all_records_have_required_keys(self, asteroids):
         required_t1 = {"H_magnitude", "albedo_pv", "diameter_km", "a_au", "e", "inc_deg",
                        "q_au", "Q_au", "spectral_class"}
-        required_t2 = {"density_gcc", "mass_kg", "rotation_h", "structure"}
-        required_t3 = {"composition", "rare_finds", "porosity"}
+        required_t2 = {"grain_density_gcc", "bulk_density_gcc", "macro_porosity", "mass_kg", "rotation_h", "structure"}
+        required_t3 = {"composition", "rare_finds", "micro_porosity"}
         for a in asteroids:
             assert required_t1 <= _t1(a).keys(), f"Missing T1 keys in {a['name']}"
             assert required_t2 <= _t2(a).keys(), f"Missing T2 keys in {a['name']}"
