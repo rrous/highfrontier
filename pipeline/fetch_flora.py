@@ -376,19 +376,23 @@ def assign_spectral_class(row: pd.Series, rng: np.random.Generator) -> str:
     Assign spectral class: real SBDB type > WISE-albedo-constrained > statistical.
     """
     # 1. prefer measured spectral type (Tholen > Bus-DeMeo)
+    #    but skip if WISE albedo directly contradicts it
+    pv_raw = row.get("pv_wise")
+    pv_for_check = float(pv_raw) if (pv_raw is not None and pd.notna(pv_raw) and float(pv_raw) > 0) else None
     for col in ("spec_T", "spec_B"):
         val = row.get(col)
         if val and pd.notna(val):
-            # map compound types to our 8-class scheme
             raw = str(val).strip().upper()
             for cls in ("S", "C", "V", "D", "M", "E", "P", "K"):
                 if raw.startswith(cls):
-                    return cls
-            return "U"   # known but unmapped type
+                    if pv_for_check is None or not _albedo_class_conflict(cls, pv_for_check):
+                        return cls
+                    break  # conflict: fall through to albedo-constrained
+            else:
+                return "U"
 
     # 2. use WISE albedo to constrain
-    pv_raw = row.get("pv_wise")
-    pv = float(pv_raw) if (pv_raw is not None and pd.notna(pv_raw)) else None
+    pv = pv_for_check
     if pv is not None:
         if pv > 0.25:
             # bright → S dominant, some V and E (inner belt, DeMeo & Carry 2013)
@@ -459,7 +463,9 @@ def build_tier2(tier1: dict, row: pd.Series, rng: np.random.Generator) -> dict:
     D    = tier1["diameter_km"]
 
     mean_grain, sig_grain = GRAIN_DENSITY_PARAMS[spec]
-    grain_density = float(np.clip(rng.normal(mean_grain, sig_grain), 1.0, 9.0))
+    grain_density = float(np.clip(rng.normal(mean_grain, sig_grain),
+                                  max(1.0, mean_grain - 1.5 * sig_grain),
+                                  mean_grain + 1.5 * sig_grain))
 
     # shape: rubble pile vs monolith threshold ~150 m (Richardson 2002)
     if D < 0.15:
