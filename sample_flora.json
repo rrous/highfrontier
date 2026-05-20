@@ -59,16 +59,16 @@
       "spectral_class": "S"
     },
     "tier2": {
-      "grain_density_gcc": 4.085,
-      "bulk_density_gcc": 2.584,
+      "grain_density_gcc": 3.925,
+      "bulk_density_gcc": 2.483,
       "macro_porosity": 0.367,
-      "mass_kg": 8.450372148742706e+18,
+      "mass_kg": 8.118572005444149e+18,
       "rotation_h": 5.079,
       "rotation_source": "LCDB",
       "structure": "rubble_pile",
       "elongation": 1.16,
-      "surface_gravity": 0.06651826,
-      "escape_velocity_ms": 110.6791,
+      "surface_gravity": 0.06390645,
+      "escape_velocity_ms": 108.4845,
       "thermal_inertia": 66.6
     },
     "tier3": {
@@ -458,16 +458,16 @@
       "spectral_class": "C"
     },
     "tier2": {
-      "grain_density_gcc": 2.04,
-      "bulk_density_gcc": 1.083,
+      "grain_density_gcc": 2.05,
+      "bulk_density_gcc": 1.088,
       "macro_porosity": 0.469,
-      "mass_kg": 4662559581483385.0,
+      "mass_kg": 4685779152002440.0,
       "rotation_h": 3.634,
       "rotation_source": "LCDB",
       "structure": "rubble_pile",
       "elongation": 1.2,
-      "surface_gravity": 0.00305532,
-      "escape_velocity_ms": 7.8529,
+      "surface_gravity": 0.00307053,
+      "escape_velocity_ms": 7.8725,
       "thermal_inertia": 97.0
     },
     "tier3": {
