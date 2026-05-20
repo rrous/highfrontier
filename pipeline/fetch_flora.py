@@ -5,11 +5,12 @@ Steps:
 1. Download Nesvorný (2015) family membership list for Flora (#828)
 2. Cross-reference WISE/NEOWISE albedos (Masiero et al.)
 3. Generate Tier 1/2/3 game parameters
-4. Optionally upsert to Supabase
 
 Usage:
     python fetch_flora.py --limit 200 --out flora.json
-    python fetch_flora.py --limit 200 --push-db
+
+To load the catalog into the route-planner database, run transform_to_db.py
+on the produced JSON.
 """
 
 from __future__ import annotations
@@ -764,77 +765,6 @@ def run_pipeline(limit: Optional[int] = None, seed: int = 42) -> list[dict]:
     return asteroids
 
 
-# ── Supabase upload ───────────────────────────────────────────────────────────
-
-SUPABASE_URL = "https://tfyuyylcygamglpdfudd.supabase.co"
-SUPABASE_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmeXV5eWxjeWdhbWdscGRmdWRkIiwicm9sZSI6"
-    "InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NDgzNSwiZXhwIjoyMDk0NzUwODM1fQ."
-    "j3fg_8fCZoZ2hpikXl0mMCsvimEvHae6_LJBtpdXLVo"
-)
-
-
-def push_to_supabase(asteroids: list[dict]) -> None:
-    from supabase import create_client
-    sb = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    log.info("Pushing %d records to Supabase …", len(asteroids))
-    batch_size = 50
-
-    for i in range(0, len(asteroids), batch_size):
-        batch = asteroids[i : i + batch_size]
-        rows  = []
-        t2_rows = []
-        t3_rows = []
-
-        for ast in batch:
-            t1  = ast["tier1"]
-            t2  = ast["tier2"]
-            t3  = ast["tier3"]
-            sid = ast["source_id"]
-
-            rows.append({
-                "source_id":      sid,
-                "name":           ast["name"],
-                "spectral_class": t1["spectral_class"],
-                "H_magnitude":    t1["H_magnitude"],
-                "albedo_pv":      t1["albedo_pv"],
-                "albedo_source":  t1["albedo_source"],
-                "diameter_km":    t1["diameter_km"],
-                "a_au":           t1["a_au"],
-                "e":              t1["e"],
-                "inc_deg":        t1["inc_deg"],
-                "q_au":           t1["q_au"],
-                "Q_au":           t1["Q_au"],
-            })
-            t2_rows.append({
-                "source_id":        sid,
-                "density_gcc":      t2["density_gcc"],
-                "mass_kg":          t2["mass_kg"],
-                "rotation_h":       t2["rotation_h"],
-                "structure":        t2["structure"],
-                "elongation":       t2["elongation"],
-                "surface_gravity":  t2["surface_gravity"],
-                "escape_velocity_ms": t2["escape_velocity_ms"],
-                "thermal_inertia":  t2["thermal_inertia"],
-            })
-            t3_rows.append({
-                "source_id":  sid,
-                "composition": t3["composition"],
-                "rare_finds":  t3["rare_finds"],
-                "porosity":    t3["porosity"],
-            })
-
-        sb.table("asteroids").upsert(rows, on_conflict="source_id").execute()
-        sb.table("asteroid_tier2").upsert(t2_rows, on_conflict="source_id").execute()
-        sb.table("asteroid_tier3").upsert(t3_rows, on_conflict="source_id").execute()
-        log.info("  batch %d–%d done", i, i + len(batch))
-        time.sleep(0.2)
-
-    log.info("Supabase push complete")
-
-
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -842,7 +772,6 @@ def main() -> None:
     ap.add_argument("--limit",   type=int,  default=None, help="max bodies to fetch")
     ap.add_argument("--seed",    type=int,  default=42,   help="RNG seed")
     ap.add_argument("--out",     type=str,  default=None, help="output JSON path")
-    ap.add_argument("--push-db", action="store_true",     help="upsert to Supabase")
     args = ap.parse_args()
 
     asteroids = run_pipeline(limit=args.limit, seed=args.seed)
@@ -850,9 +779,6 @@ def main() -> None:
     if args.out:
         Path(args.out).write_text(json.dumps(asteroids, indent=2, ensure_ascii=False))
         log.info("Saved → %s", args.out)
-
-    if args.push_db:
-        push_to_supabase(asteroids)
 
 
 if __name__ == "__main__":
