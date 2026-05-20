@@ -1,7 +1,7 @@
 # HighFrontier — Design & UX
 ## Dokument pro herní mechaniky a player experience
 
-> Stav: Draft v0.2 · Scope: Scénář 1 (Survey) + Scénář 2 (Mining)  
+> Stav: Draft v0.3 · Scope: Scénář 1 (Survey) + Scénář 2 (Mining)  
 > Tento dokument navazuje na `highfrontier_poc_design_v03.md`  
 > Kapitola 1: vědecké předpoklady → základ pro brainstorm herních mechanik  
 > Kapitola 2: Route Planner — herní mechanika průzkumné mise
@@ -253,6 +253,33 @@ Hráč vidí ~12 těles, palivo vystačí na ~5–6 waypointů (mix zastávek a 
 | RP-5 | Gravitační assist od velkých těles (8 Flora) jako skrytá zkratka | nízká |
 | RP-6 | Návrat H₂O z C-typ zastávky (in-situ těžba vody) | nízká |
 
+### 2.6 Stav implementace (2026-05-20)
+
+Route Planner `hf_route_planner_API.html` je napojený na živá data v Supabase
+(13 786 těles rodiny Flora — viz `db_design.md`).
+
+**Hotovo:**
+- Načítání scény: `fetchGameData()` volá Postgres funkci `nearby_asteroids`
+  (`pipeline/rpc_nearby_asteroids.sql`) — pošle lokaci + radius, dostane max
+  100 nejbližších těles seřazených podle 3D delta-v. `tier2`/`tier3` se
+  dotahují jen pro vrácená tělesa.
+- Souřadnice těles jsou v proper-element rychlostním prostoru (m/s; osy
+  x/y/z, kde z = sklon dráhy). Klient je promítá do 0–100 % viewportu —
+  dotazovaná lokace je střed, radius dosahuje na okraj.
+- INFO panel ukazuje skutečné 3D delta-v od BASE v m/s.
+- Spektrální barva a legenda pro všech 9 typů katalogu: S, C, M, V, E, D,
+  P, K, U.
+
+**Otevřené body:**
+- Konstanty ceny trasy (`SPEED`, `DV_STOP`, `DV_RETURN`, `Ve`, `fuelUsed`)
+  počítají v procentním prostoru mapy. `dvFlyby` (úhel zahnutí) je vůči
+  měřítku invariantní a platí dál, ale délka trasy, čas a palivo potřebují
+  přeladit na škálu delta-v v m/s — herní balanc.
+- `SB_KEY` v HTML je legacy `anon` JWT klíč; po zakázání legacy klíčů
+  v Supabase ho vyměnit za publishable klíč.
+- Monolitický HTML rozdělit na oddělený design a logiku, klient použitelný
+  na PC i mobilu — viz kapitola 3.
+
 ---
 
 ## 3. UX a vizuální jazyk — připravuje se
@@ -264,4 +291,5 @@ Hráč vidí ~12 těles, palivo vystačí na ~5–6 waypointů (mix zastávek a 
 ---
 
 *v0.1 — 2026-05-13 — Kapitola 1: Vědecké předpoklady*  
-*v0.2 — 2026-05-14 — Kapitola 2: Route Planner (fyzikální model, herní dilema, UI popis)*
+*v0.2 — 2026-05-14 — Kapitola 2: Route Planner (fyzikální model, herní dilema, UI popis)*  
+*v0.3 — 2026-05-20 — sekce 2.6: stav implementace HTML route planneru (Supabase data, nearby_asteroids RPC, rychlostní souřadnice, otevřené body)*
