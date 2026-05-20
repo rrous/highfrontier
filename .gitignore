@@ -7,3 +7,4 @@ pipeline/.data_cache/
 dist/
 build/
 .env
+raw_data/*.json
