@@ -35,7 +35,14 @@ ALTER TABLE asteroid_tier2 ALTER COLUMN albedo      TYPE numeric;
 ALTER TABLE asteroid_tier2 ALTER COLUMN diameter_km TYPE numeric;
 ALTER TABLE asteroid_tier2 ALTER COLUMN period_h    TYPE numeric;
 
--- 4) Remove the 12 hand-made demo rows.
+-- 4) Allow every spectral type the catalog produces.
+--    The existing check constraint accepts S/C/M/V/E/D/P/K but rejects U
+--    (unclassified — 163 bodies whose spectral type is genuinely unknown).
+ALTER TABLE asteroids DROP CONSTRAINT IF EXISTS asteroids_spectral_type_check;
+ALTER TABLE asteroids ADD CONSTRAINT asteroids_spectral_type_check
+    CHECK (spectral_type IN ('S', 'C', 'M', 'V', 'E', 'D', 'P', 'K', 'U'));
+
+-- 5) Remove the 12 hand-made demo rows.
 --    REQUIRED: demo id=8 collides with the real asteroid (8) Flora.
 TRUNCATE asteroids, asteroid_tier2, asteroid_tier3 RESTART IDENTITY CASCADE;
 
