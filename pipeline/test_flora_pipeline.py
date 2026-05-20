@@ -14,7 +14,7 @@ from fetch_flora import (
     run_pipeline,
     SPECTRAL_DIST,
     ALBEDO_RANGE,
-    DENSITY_PARAMS,
+    GRAIN_DENSITY_PARAMS,
     COMPOSITION_TEMPLATES,
     RARE_FIND_MATRIX,
     RARE_FIND_TIERS,
@@ -119,16 +119,19 @@ class TestTier1Values:
 
 class TestTier2PhysicsBounds:
     def test_density_range_per_class(self, asteroids):
-        # known physical bounds: rubble C-types can be ~0.8, iron M-types up to ~8
+        # bulk density: rubble C-types can be ~0.5, iron M-types up to ~6
+        # grain density: minerals range from 1.0 to 9.0
         for a in asteroids:
-            rho  = _t2(a)["density_gcc"]
-            spec = _t1(a)["spectral_class"]
-            assert 0.4 <= rho <= 9.0, f"{spec} density={rho} unphysical"
+            bulk  = _t2(a)["bulk_density_gcc"]
+            grain = _t2(a)["grain_density_gcc"]
+            spec  = _t1(a)["spectral_class"]
+            assert 0.5 <= bulk <= 6.0, f"{spec} bulk_density={bulk} unphysical"
+            assert 1.0 <= grain <= 9.0, f"{spec} grain_density={grain} unphysical"
 
     def test_M_type_density_above_C(self, asteroids):
-        """M-type mean density must exceed C-type mean density (confirmed literature)."""
-        rho_M = [_t2(a)["density_gcc"] for a in asteroids if _t1(a)["spectral_class"] == "M"]
-        rho_C = [_t2(a)["density_gcc"] for a in asteroids if _t1(a)["spectral_class"] == "C"]
+        """M-type mean bulk density must exceed C-type mean bulk density (confirmed literature)."""
+        rho_M = [_t2(a)["bulk_density_gcc"] for a in asteroids if _t1(a)["spectral_class"] == "M"]
+        rho_C = [_t2(a)["bulk_density_gcc"] for a in asteroids if _t1(a)["spectral_class"] == "C"]
         if rho_M and rho_C:
             assert np.mean(rho_M) > np.mean(rho_C), (
                 f"M-type mean density {np.mean(rho_M):.2f} should exceed C-type {np.mean(rho_C):.2f}"
@@ -144,8 +147,8 @@ class TestTier2PhysicsBounds:
     def test_mass_consistent_with_density_diameter(self, asteroids):
         for a in asteroids:
             t1 = _t1(a); t2 = _t2(a)
-            D   = t1["diameter_km"] * 1000  # m
-            rho = t2["density_gcc"] * 1e3   # kg/m³
+            D   = t1["diameter_km"] * 1000       # m
+            rho = t2["bulk_density_gcc"] * 1e3   # kg/m³
             expected_mass = rho * (4 / 3) * np.pi * (D / 2) ** 3
             actual_mass   = t2["mass_kg"]
             # allow 0.1% floating-point drift

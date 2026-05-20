@@ -79,23 +79,44 @@ ALBEDO_RANGE = {
     "U": (0.05, 0.25),
 }
 
-# density g/cm³ mean ± σ per spectral class
-DENSITY_PARAMS = {
-    "S": (3.5, 0.4),   # LL chondrite bulk
-    "C": (1.4, 0.3),   # Ryugu/Bennu bulk
-    "V": (3.8, 0.3),   # HED
-    "D": (1.2, 0.3),
-    "M": (5.0, 0.8),
-    "E": (3.2, 0.5),
-    "P": (1.3, 0.3),
-    "K": (3.0, 0.4),
-    "U": (2.0, 0.6),
+# grain density g/cm³ mean ± σ per spectral class (mineral grain density, not bulk)
+GRAIN_DENSITY_PARAMS = {
+    "S": (3.55, 0.25),  # LL/L chondrite grains (Consolmagno 2008)
+    "C": (2.50, 0.30),  # CM/CI grains (Macke 2011)
+    "V": (3.80, 0.20),  # HED grains
+    "D": (2.20, 0.30),
+    "M": (7.50, 0.50),  # Fe-Ni metal grains
+    "E": (3.50, 0.30),  # enstatite chondrite grains
+    "P": (2.30, 0.30),
+    "K": (3.30, 0.25),  # CV/CO grains
+    "U": (2.80, 0.40),
 }
 
 # rotation period hours: mean, σ (lognormal params after log transform)
 # LCDB statistics (Warner et al.)
 ROT_LOG_MEAN = np.log(6.0)   # ~6 h median
 ROT_LOG_STD  = 0.6
+
+# LCDB periody > 500h jsou téměř vždy quality flag 1 (tumbler/uncertain)
+ROT_SUSPECT_H = 500.0
+
+# Očekávané pV rozsahy per class (rozšířené o 2σ tolerance)
+_ALBEDO_CLASS_BOUNDS = {
+    "S": (0.10, 0.55),
+    "C": (0.02, 0.12),   # max 0.12 s tolerancí
+    "V": (0.15, 0.65),
+    "D": (0.01, 0.12),
+    "M": (0.06, 0.40),
+    "E": (0.25, 0.70),
+    "P": (0.01, 0.10),
+    "K": (0.05, 0.25),
+    "U": (0.02, 0.55),
+}
+
+
+def _albedo_class_conflict(spec: str, pv: float) -> bool:
+    lo, hi = _ALBEDO_CLASS_BOUNDS.get(spec, (0.01, 0.99))
+    return not (lo <= pv <= hi)
 
 
 # ── Nesvorný catalog fetch ────────────────────────────────────────────────────
@@ -402,6 +423,10 @@ def build_tier1(row: pd.Series, rng: np.random.Generator) -> dict:
         pv        = float(rng.uniform(lo, hi))
         pv_source = "generated"
 
+    albedo_class_conflict = (
+        pv_source == "WISE" and _albedo_class_conflict(spec, pv)
+    )
+
     H = float(row["H"]) if pd.notna(row.get("H")) else float(rng.uniform(12, 18))
 
     # prefer WISE diameter; fall back to H+pV formula
@@ -412,16 +437,17 @@ def build_tier1(row: pd.Series, rng: np.random.Generator) -> dict:
         D = diameter_from_H(H, pv)
 
     return {
-        "H_magnitude":    round(H, 2),
-        "albedo_pv":      round(pv, 4),
-        "albedo_source":  pv_source,
-        "diameter_km":    round(D, 3),
-        "a_au":           round(float(row["a_prop"]), 6),
-        "e":              round(float(row["e_prop"]), 6),
-        "inc_deg":        round(float(row["inc_prop"]), 4),
-        "q_au":           round(float(row["q"]), 6),
-        "Q_au":           round(float(row["Q"]), 6),
-        "spectral_class": spec,
+        "H_magnitude":           round(H, 2),
+        "albedo_pv":             round(pv, 4),
+        "albedo_source":         pv_source,
+        "albedo_class_conflict": albedo_class_conflict,
+        "diameter_km":           round(D, 3),
+        "a_au":                  round(float(row["a_prop"]), 6),
+        "e":                     round(float(row["e_prop"]), 6),
+        "inc_deg":               round(float(row["inc_prop"]), 4),
+        "q_au":                  round(float(row["q"]), 6),
+        "Q_au":                  round(float(row["Q"]), 6),
+        "spectral_class":        spec,
     }
 
 
@@ -432,21 +458,8 @@ def build_tier2(tier1: dict, row: pd.Series, rng: np.random.Generator) -> dict:
     spec = tier1["spectral_class"]
     D    = tier1["diameter_km"]
 
-    mean_rho, sig_rho = DENSITY_PARAMS[spec]
-    density = float(np.clip(rng.normal(mean_rho, sig_rho), 0.5, 8.0))
-
-    # mass kg:  M = ρ · (4/3)π(D/2)³   (D in m)
-    r_m  = D * 1000 / 2
-    mass = density * 1e3 * (4 / 3) * np.pi * r_m ** 3
-
-    # rotation: prefer measured SBDB/LCDB value where available
-    rot_raw = row.get("rot_per_sbdb") if row is not None else None
-    if rot_raw is not None and pd.notna(rot_raw) and float(rot_raw) >= 2.0:
-        rot_h      = round(float(rot_raw), 3)
-        rot_source = "LCDB"
-    else:
-        rot_h      = round(float(np.clip(np.exp(rng.normal(ROT_LOG_MEAN, ROT_LOG_STD)), 2.0, 1000.0)), 2)
-        rot_source = "generated"
+    mean_grain, sig_grain = GRAIN_DENSITY_PARAMS[spec]
+    grain_density = float(np.clip(rng.normal(mean_grain, sig_grain), 1.0, 9.0))
 
     # shape: rubble pile vs monolith threshold ~150 m (Richardson 2002)
     if D < 0.15:
@@ -456,13 +469,36 @@ def build_tier2(tier1: dict, row: pd.Series, rng: np.random.Generator) -> dict:
     else:
         structure = "rubble_pile"
 
+    # macro-porosity závisí na struktuře (Richardson 2002, Consolmagno 2008)
+    if D < 0.15:  # monolith
+        porosity = float(np.clip(rng.normal(0.10, 0.05), 0.02, 0.25))
+    elif D < 0.5:  # přechodná oblast
+        porosity = float(np.clip(rng.normal(0.25, 0.08), 0.05, 0.45))
+    else:  # rubble pile
+        porosity = float(np.clip(rng.normal(0.40, 0.08), 0.20, 0.60))
+
+    bulk_density = grain_density * (1.0 - porosity)
+
+    # mass kg:  M = ρ · (4/3)π(D/2)³   (D in m)
+    r_m  = D * 1000 / 2
+    mass = bulk_density * 1e3 * (4 / 3) * np.pi * r_m ** 3
+
+    # rotation: prefer measured SBDB/LCDB value where available
+    rot_raw = row.get("rot_per_sbdb") if row is not None else None
+    if rot_raw is not None and pd.notna(rot_raw) and float(rot_raw) >= 2.0:
+        rot_h      = round(float(rot_raw), 3)
+        rot_source = "LCDB" if float(rot_raw) <= ROT_SUSPECT_H else "LCDB_uncertain"
+    else:
+        rot_h      = round(float(np.clip(np.exp(rng.normal(ROT_LOG_MEAN, ROT_LOG_STD)), 2.0, 1000.0)), 2)
+        rot_source = "generated"
+
     # elongation a/b ratio (lognormal)
     elongation = round(float(np.exp(rng.normal(0.25, 0.2))), 2)  # 1.0 = sphere
     elongation = max(1.0, min(elongation, 3.5))
 
     # surface gravity m/s²  (g = (4/3)π G ρ r)
     r_surf = D * 1000 / 2                          # metres
-    g_surf = round((4 / 3) * np.pi * 6.674e-11 * density * 1e3 * r_surf, 8)
+    g_surf = round((4 / 3) * np.pi * 6.674e-11 * bulk_density * 1e3 * r_surf, 8)
 
     # escape velocity m/s  (v = sqrt(2 g r))
     v_esc = round(np.sqrt(2 * g_surf * r_surf), 4)
@@ -474,15 +510,17 @@ def build_tier2(tier1: dict, row: pd.Series, rng: np.random.Generator) -> dict:
         ti = float(rng.lognormal(np.log(500), 0.6))
 
     return {
-        "density_gcc":       round(density, 3),
-        "mass_kg":           round(mass, 3),
-        "rotation_h":        rot_h,
-        "rotation_source":   rot_source,
-        "structure":         structure,
-        "elongation":        elongation,
-        "surface_gravity":   g_surf,
+        "grain_density_gcc":  round(grain_density, 3),
+        "bulk_density_gcc":   round(bulk_density, 3),
+        "macro_porosity":     round(porosity, 3),
+        "mass_kg":            round(mass, 3),
+        "rotation_h":         rot_h,
+        "rotation_source":    rot_source,
+        "structure":          structure,
+        "elongation":         elongation,
+        "surface_gravity":    g_surf,
         "escape_velocity_ms": v_esc,
-        "thermal_inertia":   round(ti, 1),
+        "thermal_inertia":    round(ti, 1),
     }
 
 
@@ -644,13 +682,13 @@ def build_tier3(tier1: dict, tier2: dict, rng: np.random.Generator) -> dict:
                 "abundance":  round(float(rng.lognormal(-4, 0.8)), 8),  # ppm-scale
             })
 
-    # porosity
-    porosity = round(float(np.clip(rng.normal(0.35, 0.10), 0.05, 0.65)), 3)
+    # micro-porosity uvnitř zrn — vždy malá (< 15%)
+    micro_porosity = round(float(np.clip(rng.normal(0.05, 0.03), 0.0, 0.15)), 3)
 
     return {
-        "composition":   composition,
-        "rare_finds":    rare_finds,
-        "porosity":      porosity,
+        "composition":    composition,
+        "rare_finds":     rare_finds,
+        "micro_porosity": micro_porosity,
     }
 
 
