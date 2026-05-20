@@ -11,6 +11,7 @@
   --bg:#060910; --surface:#0c1322; --border:#182540;
   --dim:#3d5a78; --mid:#6a9cbc; --bright:#b8d4ee; --accent:#1a6ed0;
   --S:#c89836; --C:#60586a; --E:#d8d6d2; --V:#9c2e24; --M:#9c9a98; --D:#785040;
+  --P:#6b5440; --K:#a07a4a; --U:#6e6e6e;
   --green:#46c846; --yellow:#d89820; --red:#d03030;
 }
 html,body { height:100%; background:var(--bg); color:var(--mid); font-family:'Share Tech Mono',monospace; overflow:hidden; }
@@ -313,6 +314,9 @@ html,body { height:100%; background:var(--bg); color:var(--mid); font-family:'Sh
     <div class="leg-swatch" style="background:var(--V)"></div><div class="leg-text">V — bazalt, fragment Vesty</div>
     <div class="leg-swatch" style="background:var(--E)"></div><div class="leg-text">E — enstatit, vysoké albedo</div>
     <div class="leg-swatch" style="background:var(--D)"></div><div class="leg-text">D — tmavý, organický</div>
+    <div class="leg-swatch" style="background:var(--P)"></div><div class="leg-text">P — primitivní, tmavý</div>
+    <div class="leg-swatch" style="background:var(--K)"></div><div class="leg-text">K — přechodový (S/C), CV/CO chondrit</div>
+    <div class="leg-swatch" style="background:var(--U)"></div><div class="leg-text">U — neklasifikovaný</div>
     <div class="leg-div"></div>
     <div class="leg-swatch stop-s"></div> <div class="leg-text">zastávka — plný stop</div>
     <div class="leg-swatch flyby-s"></div><div class="leg-text">průlet — závisí na úhlu zahnutí</div>
@@ -369,7 +373,8 @@ const SB_URL = 'https://tfyuyylcygamglpdfudd.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmeXV5eWxjeWdhbWdscGRmdWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzQ4MzUsImV4cCI6MjA5NDc1MDgzNX0.YCxvjsi28xnT9nUMMX3ks_QFa9fEuXfqTASTup7hE5E';
 const SB_HDR = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
 
-const COLORS={S:'#c89836',C:'#60586a',E:'#d8d6d2',V:'#9c2e24',M:'#9c9a98',D:'#785040'};
+const COLORS={S:'#c89836',C:'#60586a',E:'#d8d6d2',V:'#9c2e24',M:'#9c9a98',D:'#785040',
+              P:'#6b5440',K:'#a07a4a',U:'#6e6e6e'};
 
 // Naplní se z DB při načtení
 const ASTEROIDS=[];
@@ -582,7 +587,8 @@ function drawSurface(canvas,type,seed){
   const W=canvas.width=canvas.offsetWidth||390;
   const H=canvas.height=canvas.offsetHeight||185;
   const ctx=canvas.getContext('2d');
-  const cm={S:[168,138,72],C:[50,46,56],E:[224,218,210],V:[112,42,36],M:[140,138,136],D:[118,80,62]};
+  const cm={S:[168,138,72],C:[50,46,56],E:[224,218,210],V:[112,42,36],M:[140,138,136],D:[118,80,62],
+            P:[107,84,64],K:[160,122,74],U:[110,110,110]};
   const[r,g,b]=cm[type]||[80,80,80];
 
   // Space background
