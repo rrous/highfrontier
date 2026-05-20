@@ -1,0 +1,875 @@
+[
+  {
+    "source_id": "8",
+    "name": "Flora",
+    "tier1": {
+      "H_magnitude": 6.62,
+      "albedo_pv": 0.226,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 147.491,
+      "a_au": 2.20143,
+      "e": 0.14487,
+      "inc_deg": 5.5734,
+      "q_au": 1.882509,
+      "Q_au": 2.520351,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.626,
+      "bulk_density_gcc": 2.477,
+      "macro_porosity": 0.317,
+      "mass_kg": 4.1618986783236495e+18,
+      "rotation_h": 12.865,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.49,
+      "surface_gravity": 0.0510748,
+      "escape_velocity_ms": 86.7933,
+      "thermal_inertia": 160.0
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 49.9207,
+        "pyroxen_lowca": 23.2809,
+        "pyroxen_highca": 6.5114,
+        "plagioklas": 10.3667,
+        "fe_ni_metal": 4.8932,
+        "troilit": 4.0809,
+        "chromit": 0.9463
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.063
+    }
+  },
+  {
+    "source_id": "9",
+    "name": "Metis",
+    "tier1": {
+      "H_magnitude": 6.18,
+      "albedo_pv": 0.158,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 184.158,
+      "a_au": 2.38644,
+      "e": 0.12718,
+      "inc_deg": 4.6851,
+      "q_au": 2.082933,
+      "Q_au": 2.689947,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.925,
+      "bulk_density_gcc": 2.483,
+      "macro_porosity": 0.367,
+      "mass_kg": 8.118572005444149e+18,
+      "rotation_h": 5.079,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.16,
+      "surface_gravity": 0.06390645,
+      "escape_velocity_ms": 108.4845,
+      "thermal_inertia": 66.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 53.1174,
+        "pyroxen_lowca": 27.1957,
+        "pyroxen_highca": 4.5512,
+        "plagioklas": 6.9808,
+        "fe_ni_metal": 1.4559,
+        "troilit": 6.0095,
+        "chromit": 0.6895
+      },
+      "rare_finds": [
+        {
+          "find_id": "he3_saturation",
+          "rarity": "EXOTIC",
+          "abundance": 0.02308195
+        }
+      ],
+      "micro_porosity": 0.024
+    }
+  },
+  {
+    "source_id": "43",
+    "name": "Ariadne",
+    "tier1": {
+      "H_magnitude": 7.93,
+      "albedo_pv": 0.234,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 71.34,
+      "a_au": 2.20335,
+      "e": 0.14058,
+      "inc_deg": 4.049,
+      "q_au": 1.893603,
+      "Q_au": 2.513097,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.792,
+      "bulk_density_gcc": 2.786,
+      "macro_porosity": 0.265,
+      "mass_kg": 5.295935024983402e+17,
+      "rotation_h": 5.762,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.2,
+      "surface_gravity": 0.02777939,
+      "escape_velocity_ms": 44.5172,
+      "thermal_inertia": 108.5
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.8742,
+        "pyroxen_lowca": 25.0833,
+        "pyroxen_highca": 6.1545,
+        "plagioklas": 7.7577,
+        "fe_ni_metal": 2.4415,
+        "troilit": 6.2752,
+        "chromit": 0.4136
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.064
+    }
+  },
+  {
+    "source_id": "113",
+    "name": "Amalthea",
+    "tier1": {
+      "H_magnitude": 8.54,
+      "albedo_pv": 0.224,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 50.137,
+      "a_au": 2.37601,
+      "e": 0.12118,
+      "inc_deg": 4.4529,
+      "q_au": 2.088085,
+      "Q_au": 2.663935,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.662,
+      "bulk_density_gcc": 2.002,
+      "macro_porosity": 0.453,
+      "mass_kg": 1.32115106320244e+17,
+      "rotation_h": 9.95,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.26,
+      "surface_gravity": 0.01403079,
+      "escape_velocity_ms": 26.5229,
+      "thermal_inertia": 80.9
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 61.1396,
+        "pyroxen_lowca": 20.471,
+        "pyroxen_highca": 2.4989,
+        "plagioklas": 7.5409,
+        "fe_ni_metal": 1.1965,
+        "troilit": 6.8822,
+        "chromit": 0.271
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.098
+    }
+  },
+  {
+    "source_id": "254",
+    "name": "Augusta",
+    "tier1": {
+      "H_magnitude": 11.84,
+      "albedo_pv": 0.17,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 12.467,
+      "a_au": 2.19482,
+      "e": 0.11783,
+      "inc_deg": 4.1593,
+      "q_au": 1.936204,
+      "Q_au": 2.453436,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.49,
+      "bulk_density_gcc": 2.38,
+      "macro_porosity": 0.318,
+      "mass_kg": 2414558869038073.5,
+      "rotation_h": 5.895,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.33,
+      "surface_gravity": 0.00414725,
+      "escape_velocity_ms": 7.1905,
+      "thermal_inertia": 111.6
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 54.9301,
+        "pyroxen_lowca": 24.9657,
+        "pyroxen_highca": 5.2175,
+        "plagioklas": 10.8907,
+        "fe_ni_metal": 0.396,
+        "troilit": 3.3973,
+        "chromit": 0.2027
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.082
+    }
+  },
+  {
+    "source_id": "281",
+    "name": "Lucretia",
+    "tier1": {
+      "H_magnitude": 12.05,
+      "albedo_pv": 0.226,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 11.036,
+      "a_au": 2.18777,
+      "e": 0.13059,
+      "inc_deg": 4.3886,
+      "q_au": 1.902069,
+      "Q_au": 2.473471,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.589,
+      "bulk_density_gcc": 2.199,
+      "macro_porosity": 0.387,
+      "mass_kg": 1547676633747739.8,
+      "rotation_h": 4.348,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.04,
+      "surface_gravity": 0.00339237,
+      "escape_velocity_ms": 6.1187,
+      "thermal_inertia": 43.3
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 48.2344,
+        "pyroxen_lowca": 23.3741,
+        "pyroxen_highca": 8.3884,
+        "plagioklas": 9.1006,
+        "fe_ni_metal": 6.8282,
+        "troilit": 3.9323,
+        "chromit": 0.142
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.046
+    }
+  },
+  {
+    "source_id": "298",
+    "name": "Baptistina",
+    "tier1": {
+      "H_magnitude": 11.21,
+      "albedo_pv": 0.131,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 21.135,
+      "a_au": 2.26385,
+      "e": 0.1476,
+      "inc_deg": 5.9586,
+      "q_au": 1.929706,
+      "Q_au": 2.597994,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.877,
+      "bulk_density_gcc": 2.258,
+      "macro_porosity": 0.418,
+      "mass_kg": 1.1161007964134302e+16,
+      "rotation_h": 16.23,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.18,
+      "surface_gravity": 0.0066703,
+      "escape_velocity_ms": 11.8734,
+      "thermal_inertia": 173.9
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.5068,
+        "pyroxen_lowca": 28.4497,
+        "pyroxen_highca": 5.065,
+        "plagioklas": 6.183,
+        "fe_ni_metal": 0.0,
+        "troilit": 7.8355,
+        "chromit": 0.96
+      },
+      "rare_finds": [
+        {
+          "find_id": "he3_saturation",
+          "rarity": "EXOTIC",
+          "abundance": 0.05647176
+        }
+      ],
+      "micro_porosity": 0.04
+    }
+  },
+  {
+    "source_id": "341",
+    "name": "California",
+    "tier1": {
+      "H_magnitude": 11.38,
+      "albedo_pv": 0.425,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 15.83,
+      "a_au": 2.1994,
+      "e": 0.12765,
+      "inc_deg": 5.2608,
+      "q_au": 1.918647,
+      "Q_au": 2.480153,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.779,
+      "bulk_density_gcc": 2.668,
+      "macro_porosity": 0.294,
+      "mass_kg": 5542282931906421.0,
+      "rotation_h": 318.0,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.29,
+      "surface_gravity": 0.00590436,
+      "escape_velocity_ms": 9.6678,
+      "thermal_inertia": 78.5
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 48.4012,
+        "pyroxen_lowca": 27.0969,
+        "pyroxen_highca": 5.8779,
+        "plagioklas": 11.2938,
+        "fe_ni_metal": 3.4211,
+        "troilit": 3.4904,
+        "chromit": 0.4187
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.034
+    }
+  },
+  {
+    "source_id": "352",
+    "name": "Gisela",
+    "tier1": {
+      "H_magnitude": 10.1,
+      "albedo_pv": 0.195,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 26.744,
+      "a_au": 2.1941,
+      "e": 0.13673,
+      "inc_deg": 4.2892,
+      "q_au": 1.894101,
+      "Q_au": 2.494099,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.331,
+      "bulk_density_gcc": 2.024,
+      "macro_porosity": 0.392,
+      "mass_kg": 2.0267486045091244e+16,
+      "rotation_h": 7.49,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.0,
+      "surface_gravity": 0.00756473,
+      "escape_velocity_ms": 14.2236,
+      "thermal_inertia": 48.0
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 56.3914,
+        "pyroxen_lowca": 16.4105,
+        "pyroxen_highca": 2.4432,
+        "plagioklas": 11.0334,
+        "fe_ni_metal": 11.0694,
+        "troilit": 2.313,
+        "chromit": 0.3391
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.05
+    }
+  },
+  {
+    "source_id": "364",
+    "name": "Isara",
+    "tier1": {
+      "H_magnitude": 9.91,
+      "albedo_pv": 0.3,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 25.901,
+      "a_au": 2.22077,
+      "e": 0.15864,
+      "inc_deg": 5.54,
+      "q_au": 1.868467,
+      "Q_au": 2.573073,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.37,
+      "bulk_density_gcc": 1.936,
+      "macro_porosity": 0.425,
+      "mass_kg": 1.7617908483347778e+16,
+      "rotation_h": 9.156,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.26,
+      "surface_gravity": 0.0070108,
+      "escape_velocity_ms": 13.4754,
+      "thermal_inertia": 284.8
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 55.3637,
+        "pyroxen_lowca": 23.0171,
+        "pyroxen_highca": 3.1303,
+        "plagioklas": 6.1051,
+        "fe_ni_metal": 6.8244,
+        "troilit": 4.979,
+        "chromit": 0.5803
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.06
+    }
+  },
+  {
+    "source_id": "428",
+    "name": "Monachia",
+    "tier1": {
+      "H_magnitude": 11.99,
+      "albedo_pv": 0.069,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 20.184,
+      "a_au": 2.30792,
+      "e": 0.15457,
+      "inc_deg": 5.7277,
+      "q_au": 1.951185,
+      "Q_au": 2.664655,
+      "spectral_class": "C"
+    },
+    "tier2": {
+      "grain_density_gcc": 2.05,
+      "bulk_density_gcc": 1.088,
+      "macro_porosity": 0.469,
+      "mass_kg": 4685779152002440.0,
+      "rotation_h": 3.634,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.2,
+      "surface_gravity": 0.00307053,
+      "escape_velocity_ms": 7.8725,
+      "thermal_inertia": 97.0
+    },
+    "tier3": {
+      "composition": {
+        "fylosilikat": 54.8595,
+        "magnetit": 5.1693,
+        "troilit": 6.3997,
+        "karbonaty": 5.0085,
+        "h2o_bound": 13.766,
+        "c_organic": 4.6214,
+        "olivin": 4.7301,
+        "pyroxen_lowca": 5.4454
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.095
+    }
+  },
+  {
+    "source_id": "453",
+    "name": "Tea",
+    "tier1": {
+      "H_magnitude": 10.56,
+      "albedo_pv": 0.137,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 23.985,
+      "a_au": 2.18323,
+      "e": 0.13962,
+      "inc_deg": 5.346,
+      "q_au": 1.878407,
+      "Q_au": 2.488053,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.709,
+      "bulk_density_gcc": 2.433,
+      "macro_porosity": 0.344,
+      "mass_kg": 1.757788865837776e+16,
+      "rotation_h": 6.812,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.05,
+      "surface_gravity": 0.00815706,
+      "escape_velocity_ms": 13.9874,
+      "thermal_inertia": 101.7
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 49.7859,
+        "pyroxen_lowca": 23.7403,
+        "pyroxen_highca": 6.2638,
+        "plagioklas": 12.5974,
+        "fe_ni_metal": 6.4891,
+        "troilit": 0.4649,
+        "chromit": 0.6586
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.045
+    }
+  },
+  {
+    "source_id": "496",
+    "name": "Gryphia",
+    "tier1": {
+      "H_magnitude": 11.75,
+      "albedo_pv": 0.193,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 14.403,
+      "a_au": 2.19889,
+      "e": 0.13095,
+      "inc_deg": 4.4167,
+      "q_au": 1.910945,
+      "Q_au": 2.486835,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.646,
+      "bulk_density_gcc": 1.896,
+      "macro_porosity": 0.48,
+      "mass_kg": 2966000395796143.5,
+      "rotation_h": 1072.0,
+      "rotation_source": "LCDB_uncertain",
+      "structure": "rubble_pile",
+      "elongation": 1.04,
+      "surface_gravity": 0.00381691,
+      "escape_velocity_ms": 7.4145,
+      "thermal_inertia": 93.9
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 56.8367,
+        "pyroxen_lowca": 19.6264,
+        "pyroxen_highca": 3.1322,
+        "plagioklas": 8.7788,
+        "fe_ni_metal": 6.0984,
+        "troilit": 4.6886,
+        "chromit": 0.8389
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.0
+    }
+  },
+  {
+    "source_id": "525",
+    "name": "Adelaide",
+    "tier1": {
+      "H_magnitude": 12.21,
+      "albedo_pv": 0.221,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 9.326,
+      "a_au": 2.24519,
+      "e": 0.14855,
+      "inc_deg": 6.6428,
+      "q_au": 1.911667,
+      "Q_au": 2.578713,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.564,
+      "bulk_density_gcc": 2.273,
+      "macro_porosity": 0.362,
+      "mass_kg": 965200342888066.5,
+      "rotation_h": 19.967,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.41,
+      "surface_gravity": 0.0029626,
+      "escape_velocity_ms": 5.2563,
+      "thermal_inertia": 142.0
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.5538,
+        "pyroxen_lowca": 26.3876,
+        "pyroxen_highca": 5.3266,
+        "plagioklas": 9.8172,
+        "fe_ni_metal": 1.8404,
+        "troilit": 4.5287,
+        "chromit": 0.5455
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.091
+    }
+  },
+  {
+    "source_id": "540",
+    "name": "Rosamunde",
+    "tier1": {
+      "H_magnitude": 10.75,
+      "albedo_pv": 0.331,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 16.283,
+      "a_au": 2.21889,
+      "e": 0.14567,
+      "inc_deg": 5.9822,
+      "q_au": 1.895664,
+      "Q_au": 2.542116,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.573,
+      "bulk_density_gcc": 2.383,
+      "macro_porosity": 0.333,
+      "mass_kg": 5387152730628288.0,
+      "rotation_h": 9.351,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.14,
+      "surface_gravity": 0.00542421,
+      "escape_velocity_ms": 9.398,
+      "thermal_inertia": 47.7
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 49.5126,
+        "pyroxen_lowca": 23.9419,
+        "pyroxen_highca": 7.0094,
+        "plagioklas": 13.199,
+        "fe_ni_metal": 0.0,
+        "troilit": 6.1379,
+        "chromit": 0.1993
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.062
+    }
+  },
+  {
+    "source_id": "553",
+    "name": "Kundry",
+    "tier1": {
+      "H_magnitude": 12.39,
+      "albedo_pv": 0.287,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 9.01,
+      "a_au": 2.23083,
+      "e": 0.12734,
+      "inc_deg": 4.7662,
+      "q_au": 1.946756,
+      "Q_au": 2.514904,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.517,
+      "bulk_density_gcc": 2.012,
+      "macro_porosity": 0.428,
+      "mass_kg": 770623703623042.1,
+      "rotation_h": 12.605,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.9,
+      "surface_gravity": 0.00253419,
+      "escape_velocity_ms": 4.7784,
+      "thermal_inertia": 282.5
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 51.3584,
+        "pyroxen_lowca": 24.1434,
+        "pyroxen_highca": 7.0081,
+        "plagioklas": 7.1612,
+        "fe_ni_metal": 4.8983,
+        "troilit": 4.8484,
+        "chromit": 0.5822
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.128
+    }
+  },
+  {
+    "source_id": "685",
+    "name": "Hermia",
+    "tier1": {
+      "H_magnitude": 12.05,
+      "albedo_pv": 0.2973,
+      "albedo_source": "generated",
+      "albedo_class_conflict": false,
+      "diameter_km": 9.482,
+      "a_au": 2.23587,
+      "e": 0.14475,
+      "inc_deg": 4.5179,
+      "q_au": 1.912228,
+      "Q_au": 2.559512,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.573,
+      "bulk_density_gcc": 1.978,
+      "macro_porosity": 0.446,
+      "mass_kg": 882803852020519.8,
+      "rotation_h": 50.4,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.27,
+      "surface_gravity": 0.00262126,
+      "escape_velocity_ms": 4.9855,
+      "thermal_inertia": 91.8
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 47.2874,
+        "pyroxen_lowca": 25.7018,
+        "pyroxen_highca": 3.2944,
+        "plagioklas": 10.3234,
+        "fe_ni_metal": 7.2504,
+        "troilit": 5.7287,
+        "chromit": 0.4138
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.041
+    }
+  },
+  {
+    "source_id": "700",
+    "name": "Auravictrix",
+    "tier1": {
+      "H_magnitude": 11.16,
+      "albedo_pv": 0.228,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 16.421,
+      "a_au": 2.22954,
+      "e": 0.15385,
+      "inc_deg": 6.4029,
+      "q_au": 1.886525,
+      "Q_au": 2.572555,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.528,
+      "bulk_density_gcc": 1.894,
+      "macro_porosity": 0.463,
+      "mass_kg": 4390811361306056.0,
+      "rotation_h": 6.075,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.38,
+      "surface_gravity": 0.00434702,
+      "escape_velocity_ms": 8.4488,
+      "thermal_inertia": 139.7
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 47.7601,
+        "pyroxen_lowca": 27.528,
+        "pyroxen_highca": 8.239,
+        "plagioklas": 7.0435,
+        "fe_ni_metal": 1.3338,
+        "troilit": 7.654,
+        "chromit": 0.4416
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.057
+    }
+  },
+  {
+    "source_id": "703",
+    "name": "Noemi",
+    "tier1": {
+      "H_magnitude": 12.49,
+      "albedo_pv": 0.368,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 7.25,
+      "a_au": 2.17492,
+      "e": 0.12369,
+      "inc_deg": 3.3267,
+      "q_au": 1.905904,
+      "Q_au": 2.443936,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.487,
+      "bulk_density_gcc": 2.136,
+      "macro_porosity": 0.387,
+      "mass_kg": 426279289897500.0,
+      "rotation_h": 200.0,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.34,
+      "surface_gravity": 0.00216503,
+      "escape_velocity_ms": 3.9619,
+      "thermal_inertia": 60.4
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 49.6794,
+        "pyroxen_lowca": 23.5413,
+        "pyroxen_highca": 5.0969,
+        "plagioklas": 8.9332,
+        "fe_ni_metal": 4.3188,
+        "troilit": 8.0119,
+        "chromit": 0.4186
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.048
+    }
+  },
+  {
+    "source_id": "711",
+    "name": "Marmulla",
+    "tier1": {
+      "H_magnitude": 11.86,
+      "albedo_pv": 0.453,
+      "albedo_source": "WISE",
+      "albedo_class_conflict": false,
+      "diameter_km": 9.026,
+      "a_au": 2.23724,
+      "e": 0.14929,
+      "inc_deg": 6.03,
+      "q_au": 1.903242,
+      "Q_au": 2.571238,
+      "spectral_class": "S"
+    },
+    "tier2": {
+      "grain_density_gcc": 3.325,
+      "bulk_density_gcc": 1.945,
+      "macro_porosity": 0.415,
+      "mass_kg": 748691484888972.4,
+      "rotation_h": 2.721,
+      "rotation_source": "LCDB",
+      "structure": "rubble_pile",
+      "elongation": 1.0,
+      "surface_gravity": 0.00245334,
+      "escape_velocity_ms": 4.7057,
+      "thermal_inertia": 195.1
+    },
+    "tier3": {
+      "composition": {
+        "olivin": 61.009,
+        "pyroxen_lowca": 23.5779,
+        "pyroxen_highca": 5.8734,
+        "plagioklas": 4.2871,
+        "fe_ni_metal": 0.5445,
+        "troilit": 4.5253,
+        "chromit": 0.1829
+      },
+      "rare_finds": [],
+      "micro_porosity": 0.065
+    }
+  }
+]
