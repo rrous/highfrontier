@@ -417,15 +417,16 @@ async function fetchGameData() {
     body: JSON.stringify({ qx, qy, qz, radius: searchRadius, max_n: 100 }),
   });
   if (!r1.ok) throw new Error(`nearby_asteroids ${r1.status}`);
-  // Floru samotnou vynech (je to BASE), nech nejbližších wantN sousedů.
-  const asteroids = (await r1.json())
-    .filter(a => a.name !== 'Flora')
-    .slice(0, wantN);
+  // Nejbližších wantN sousedů + Flora samotná (leží na BASE, vykreslí se vedle).
+  const all        = await r1.json();
+  const flora      = all.find(a => a.name === 'Flora');
+  const neighbours = all.filter(a => a.name !== 'Flora').slice(0, wantN);
+  const asteroids  = flora ? [...neighbours, flora] : neighbours;
 
-  // Projekční radius: nejvzdálenější ponechané těleso + 15% okraj,
-  // aby se celá scéna vešla do mapy.
+  // Projekční radius: nejvzdálenější soused + 15% okraj (Flora je ve středu,
+  // do měřítka nezasahuje), aby se celá scéna vešla do mapy.
   let projR = 0;
-  asteroids.forEach(a => {
+  neighbours.forEach(a => {
     const d = Math.hypot(a.x_pos - qx, a.y_pos - qy);
     if (d > projR) projR = d;
   });
@@ -449,10 +450,13 @@ async function fetchGameData() {
 
   // Projekce rychlostního prostoru do 0–100 % viewportu:
   // BASE ve středu (50,50), projR na okraj.
+  // Flora leží přesně na BASE — vykreslí se s malým odsazením, aby ji
+  // nepřekrýval BASE marker a šla kliknout.
   asteroids.forEach(a => {
+    const isFlora = a.name === 'Flora';
     ASTEROIDS.push({ id: a.id, name: a.name, type: a.spectral_type,
-                     x: 50 + 50 * (a.x_pos - qx) / projR,
-                     y: 50 + 50 * (a.y_pos - qy) / projR,
+                     x: isFlora ? 55 : 50 + 50 * (a.x_pos - qx) / projR,
+                     y: isFlora ? 58 : 50 + 50 * (a.y_pos - qy) / projR,
                      r: a.r_size,
                      vx: a.x_pos, vy: a.y_pos, vz: a.z_pos ?? 0 });
 
