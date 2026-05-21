@@ -207,12 +207,9 @@ frameworku.** Je to čistý TypeScript. To je předpoklad pro:
 - **Build:** Vite — rychlý dev server, minimální konfigurace, standard.
 - **Jazyk:** TypeScript — typová bezpečnost je u takto rostoucí codebase nutnost,
   ne luxus.
-- **UI framework:** **Svelte** jako primární návrh. Důvody: malý objem boilerplate
+- **UI framework:** **Svelte** — rozhodnuto. Důvody: malý objem boilerplate
   (rychlá iterace), kompilace do efektivního kódu (dobré i na mobilu), čistý
-  oddělený CSS scope na komponentu. **React** je plně akceptovatelná alternativa
-  — větší ekosystém a více vývojářů ho zná; pokud se ukáže, že tým/AI nástroje
-  pracují lépe s Reactem, je to legitimní volba. Rozhodnutí mezi nimi se uzavře
-  po prvním prototypovém kroku (§12).
+  oddělený CSS scope na komponentu.
 - **Herní jádro (`game/`):** žádný framework — čistý TypeScript. To je úmyslné
   oddělení, aby výměna UI vrstvy ani port na Godot nezasáhly logiku.
 - **Vykreslení mapy:** HTML Canvas 2D pro start (prototyp ho už používá);
@@ -579,8 +576,8 @@ datového modelu (napojený na `db_design.md`), až k ní vývoj dojde.
 
 | # | Otázka | Souvislost |
 |---|---|---|
-| OQ-1 | Svelte vs. React — finální volba po prototypovém kroku | §3.2, krok 1 |
-| OQ-2 | Balanc reálné fyziky — konkrétní hodnoty `SPEED`, `Ve`, rozpočtů delta-v | §5.4, krok 3 |
+| OQ-1 | ~~Svelte vs. React~~ — **rozhodnuto: Svelte** | §3.2, krok 1 |
+| OQ-2 | Balanc reálné fyziky — `SPEED`, `Ve`, rozpočty delta-v. Implementace použije fyzikálně věrohodné reálné defaulty (m/s), zdokumentované u konstant a označené k pozdějšímu doladění | §5.4, krok 4 |
 | OQ-3 | Rozsah vzdělávací vrstvy na mobilu vs. PC | §7 |
 | OQ-4 | Výběr image modelu pro generování průletů (Imagen / DALL·E / SD) + rozsah pipeline (kolik těles, jak často, schvalovací proces) | §8.2 |
 | OQ-5 | Struktura persistentní vrstvy pro dávkové sdílení katalogů | §4.4 |
