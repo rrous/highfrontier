@@ -1,0 +1,55 @@
+/* Design tokens — single source of truth for app/ui/.
+   Spectral palette from docs/highfrontier_poc_design_v04.md §9.2. */
+:root {
+  /* Background / surface */
+  --bg:      #060910;
+  --surface: #0c1322;
+  --border:  #182540;
+
+  /* Text scale */
+  --dim:    #3d5a78;
+  --mid:    #6a9cbc;
+  --bright: #b8d4ee;
+
+  /* Accent */
+  --accent: #1a6ed0;
+
+  /* Spectral type colors */
+  --S: #c89836;
+  --C: #60586a;
+  --E: #d8d6d2;
+  --V: #9c2e24;
+  --M: #9c9a98;
+  --D: #785040;
+  --P: #6b5440;
+  --K: #a07a4a;
+  --U: #6e6e6e;
+
+  /* Status */
+  --green:  #46c846;
+  --yellow: #d89820;
+  --red:    #d03030;
+
+  /* Typography */
+  --font-mono:   'Share Tech Mono', monospace;
+  --font-hud:    'Orbitron', sans-serif;
+
+  /* Layout */
+  --app-max-w: 430px;
+  --header-h:  43px;
+}
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--mid);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+}
