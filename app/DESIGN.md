@@ -47,7 +47,78 @@ spektrometrem a buduje katalog (viz core loop v `highfrontier_poc_design_v04.md`
 Data jsou ukotvena v reálném vědeckém katalogu (JPL/WISE) — to, co věda nezná,
 je herní mechanika (Tier model, `db_design.md` §1).
 
-**Cílové platformy:**
+### 1.1 Cílová vize (cílový stav)
+
+Tato sekce popisuje **cílový stav hry**, ne rozsah aktuální verze aplikace. Je
+zde proto, aby žádné technické rozhodnutí tuto vizi nezavřelo (door-keeping —
+viz §1.2). Aktuální verze z ní implementuje jen část (§1.4).
+
+**Denní herní čas.** Hráč má každý reálný den přidělený rozpočet herního času
+(reálné minuty odpovídají herním dnům, týdnům či měsícům). Tento čas se
+spotřebovává **pohybem a akcemi**:
+
+- **Pohyb** proběhne v reálném čase okamžitě, ale podle delta-v, zvolené
+  rychlosti a vzdálenosti spotřebuje odpovídající herní čas. Letět daleko a
+  pomalu znamená, že toho ten den moc jiného nestihnu — i když to v reálu
+  trvalo pět minut, herní čas je utracen.
+- **Akce** (průzkum, spuštění těžby…) mají vlastní časovou dotaci.
+- Herní čas tedy **vyplývá z modelu letu** (delta-v + rychlost) a z akcí — není
+  to nezávislý zdroj a je **nadřazený palivu** (viz §5.7).
+
+Po vyčerpání denního herního času může hráč už jen **volné akce**, které se do
+herního času nepočítají: plánování, konfigurace a vybavení lodi, studium,
+investování, obchod, nákup patentů, komunikace.
+
+**Hranice dne.** Reálná půlnoc resetuje denní rozpočet. Poslední akcí dne může
+být **změna base** — před půlnocí je tak jasné, v jaké base bude který hráč pro
+další reálný den.
+
+**Persistentní vrstva a řetězec činností.** Výsledky akcí se zapisují do
+persistentní vrstvy a jsou vstupem pro navazující činnosti:
+
+```
+průzkum → claim → těžba → konstrukce/výroba → přeprava → konfigurace → …
+```
+
+Do persistentní vrstvy patří: informace z průzkumu, claimy, natěžené suroviny,
+uskladněné suroviny, postavené komponenty. Zápis nastává **po akci nebo po
+pohybu**; samotný průběh pohybu je efemerní.
+
+- **Claim** je *část tělesa* — ložisko, které má smysl těžit po nějakou dobu
+  (analogie naleziště ropy); u malých těles celé těleso. Claim je persistentní,
+  má právní platnost, je obchodovatelný a může mít omezenou dobu platnosti.
+- **Těžba je automatická.** Akce je *spuštění* těžby, *zastavení* je volná akce.
+  Persistentní stav se aktualizuje v herních intervalech (postačuje ~1 herní den).
+
+**Sdílený vesmír.** Cílem je jeden sdílený persistentní vesmír — všichni hráči
+ve stejném poli těles, s konkurencí o claimy. Hráči se navzájem **potkávají
+efemerně, jen když chtějí** (presence, §4). Pirátský prvek (vyhledávání cizích
+claimů a těžba „na černo") je možné rozšíření — otevřený bod (§12).
+
+> **Denní výzva.** Mechanismus „denní výzvy" z `highfrontier_poc_design_v04.md`
+> §6.1 slouží v PoC fázi jako samostatný nástroj k ladění zábavnosti od úplného
+> začátku. V cílovém stavu se rozpouští do hry jako přirozená činnost — hráči
+> hledají něco někde kvůli svým vlastním plánům.
+
+### 1.2 Door-keeping — co nesmí žádné rozhodnutí zavřít
+
+Cílová vize (§1.1) klade na architekturu několik požadavků. Aktuální verze je
+nemusí implementovat, ale **nesmí je znemožnit**:
+
+1. **Server-autorita.** Persistentní a sdílený stav (herní čas, claimy,
+   suroviny, postavené komponenty) je autoritativní na serveru — klient akci
+   navrhuje, server validuje a zapisuje. Detail v §3.5.
+2. **`game/` jádro běží i na serveru.** Logika pravidel je čistý TypeScript bez
+   webových závislostí (§3.1) — záměrně, aby běžela na klientovi (predikce, UI)
+   i na serveru (autorita). Viz §3.5.
+3. **Identita hráče v datovém modelu od začátku.** Solo hra bez přihlášení může
+   být raný režim, ale schéma persistentní vrstvy počítá s vlastníkem (claim,
+   sklad, průzkumný záznam patří hráči).
+4. **`net/` pokrývá i persistentní sdílený stav**, nejen efemerní presence (§4).
+5. **Čas je prvotřídní, serverem sledovaný zdroj** — ne klientská proměnná.
+6. **Datový model navržený pro řetězec činností** průzkum → … → konfigurace.
+
+### 1.3 Cílové platformy
 
 - **PC-first** — primární cíl, plná funkcionalita včetně vzdělávací vrstvy.
 - **Mobil** — sekundární cíl; aplikace má být použitelná na dotykovém zařízení,
@@ -55,7 +126,9 @@ je herní mechanika (Tier model, `db_design.md` §1).
 - **Godot (výhled)** — částečný nebo úplný port na Godot 4 jako nativní/herně
   bohatší klient. Architektura tomu musí jít vstříc (viz §3).
 
-**V rozsahu této verze aplikace:**
+### 1.4 Rozsah této verze aplikace
+
+**V rozsahu:**
 
 - Route Planner přenesený do nové, modulární struktury.
 - Reálný fyzikální model letu (hybrid — viz §5).
@@ -63,9 +136,10 @@ je herní mechanika (Tier model, `db_design.md` §1).
 - Vzdělávací vrstva (§7).
 - Efemerní multiplayer presence (§4).
 
-**Mimo rozsah této verze (popsáno jako směr, neimplementuje se):**
+**Mimo rozsah této verze** — patří do cílové vize (§1.1), ale teď se
+neimplementuje; architektura jim ale nechává otevřené dveře (§1.2):
 
-- Persistentní sdílení katalogů mezi hráči (§4).
+- Persistentní vrstva: herní čas, claimy, suroviny, výroba, řetězec činností (§4).
 - Konfigurace lodi a filtrování mapy podle charakteristik (§9).
 - Plná 3D scéna průzkumu / přechod na Godot (§3).
 - Scénář 2 (Mining) a ekonomický systém.
@@ -83,8 +157,9 @@ je herní mechanika (Tier model, `db_design.md` §1).
    vysvětlitelné přímo v aplikaci (§7).
 4. **Oddělení vrstev.** Design, herní logika a datový přístup jsou oddělené od
    začátku — náprava monolitu prototypu (§3).
-5. **Připraveno na multiplayer i Godot, ale ne přeinženýrované.** Architektura
-   nechává švy pro budoucí vrstvy; neimplementuje je předčasně.
+5. **Připraveno na persistentní svět, multiplayer i Godot, ale ne
+   přeinženýrované.** Architektura nechává švy pro budoucí vrstvy (§1.2);
+   neimplementuje je předčasně.
 
 ---
 
@@ -172,6 +247,27 @@ Proto je hranice `game/` ↔ `ui/` tvrdá. Čím čistší je `game/`, tím levn
 port. Detailní Godot scéna (3D průzkum) je popsána v `highfrontier_poc_design_v04.md`
 §13 a je mimo rozsah této webové aplikace.
 
+### 3.5 Server-autorita a běh jádra na serveru
+
+Cílová vize (§1.1) staví na persistentním sdíleném stavu. To klade dva
+architektonické požadavky, které platí už teď, i když persistentní vrstva ještě
+není implementována:
+
+- **Autoritativní je server.** Cokoli je persistentní nebo sdílené — herní čas,
+  claimy, stav těžby, suroviny, postavené komponenty — validuje a zapisuje
+  server. Klient akci pouze navrhuje. Bez toho jsou herní čas i claimy
+  triviálně podvoditelné. Realizace: Supabase (PostgreSQL + RLS pro data per
+  hráč, Edge Functions pro autoritativní logiku).
+- **Jádro `game/` běží na klientovi i na serveru.** Protože je to čistý
+  TypeScript bez DOM a bez UI frameworku (§3.1), stejný kód pravidel poběží
+  v prohlížeči (predikce, plynulé UI) i v serverové funkci (autorita,
+  validace). To je další důvod, proč je hranice `game/` ↔ `ui/` tvrdá — nejen
+  kvůli Godotu, ale i kvůli sdílení logiky se serverem.
+
+Aktuální verze běží prakticky bez serverové logiky (jen čtení přes RPC). Toto
+je proto **door-keeping**, ne okamžitá práce: nepsat herní pravidla tak, aby
+šla spustit jen na klientovi.
+
 ---
 
 ## 4. Multiplayer architektura
@@ -205,13 +301,23 @@ je za tímto rozhraním. Důsledky:
 - Solo hra `net/` vůbec nevolá.
 - Budoucí port na Godot vymění implementaci `net/`, ne rozhraní.
 
-### 4.4 Odložené — persistentní vrstva
+### 4.4 Persistentní vrstva — jádro cílové vize
 
-Mimo rozsah této verze, ale architektura na to nechává místo: **„dávkové"
-sdílení výsledků průzkumu** — hráč po misi nahraje svůj katalog, jiní hráči si
-ho mohou stáhnout/koupit (vazba na scénář „těžaři" v `highfrontier_poc_design_v04.md`).
-To vyžaduje autentizaci a persistentní tabulky. Neimplementuje se nyní; až bude
-relevantní, vznikne samostatný návrh. `net/` rozhraní se rozšíří, nezahodí.
+V cílovém stavu (§1.1) je persistentní vrstva **páteří hry**, ne doplňkem:
+herní čas, claimy, natěžené a uskladněné suroviny, postavené komponenty a celý
+řetězec průzkum → claim → těžba → výroba → přeprava → konfigurace. Efemerní
+presence (§4.1–4.3) je vedle toho jen tenká vrstva „vidět se, když chceme".
+
+Tato verze aplikace persistentní vrstvu **neimplementuje** — implementační
+pořadí jde od solo hry a presence (§11). Architektura jí ale musí nechat dveře:
+
+- `net/` rozhraní se navrhne tak, aby pokrylo i persistentní sdílený stav, ne
+  jen broadcast polohy.
+- Persistentní zápis nastává **po akci nebo po pohybu** (průběh pohybu je
+  efemerní — §1.1); rozhraní `game/` ↔ `data/` s tím počítá.
+- Server-autorita a běh `game/` na serveru — viz §3.5.
+- Datový model (schéma `db_design.md`) se rozšíří o vlastníka, claimy, sklady
+  a herní čas; to bude samostatný návrh napojený na `db_design.md`.
 
 ---
 
@@ -288,6 +394,22 @@ bylo jasné, odkud která mechanika pochází a jak je adaptována. Výchozí bo
 Každý prvek plánu má „co to znamená" zobrazení: Δv koláček → kolik m/s a kolik kg
 paliva; cestovní čas → reálné jednotky; rozpočet delta-v → proč Tsiolkovsky dělá
 plnou nádrž dražší. Vazba na §7.
+
+### 5.7 Herní čas vychází z modelu letu
+
+V cílové vizi (§1.1) má hráč denní rozpočet herního času a pohyb ho spotřebovává.
+Tento herní čas **není nezávislý zdroj** — vychází přímo z modelu letu:
+
+- delta-v + zvolená cestovní rychlost + vzdálenost → doba letu v herním čase;
+- akce (průzkum, spuštění těžby) mají vlastní časovou dotaci.
+
+Palivo (rozpočet delta-v) a herní čas jsou tedy provázané: palivo omezuje,
+*kam* doletím; herní čas omezuje, *kolik* toho za den stihnu. Čas je nadřazený —
+pomalý daleký let utratí denní rozpočet, i kdyby paliva zbývalo dost.
+
+Tato verze aplikace denní rozpočet neimplementuje, ale model letu (§5.2) počítá
+dobu letu v reálných jednotkách už teď — denní rozpočet se na něj později
+napojí bez přepracování fyziky.
 
 ---
 
@@ -447,6 +569,10 @@ Pořadí kroků. Každý krok produkuje něco spustitelného a ověřitelného.
 Kroky 1–4 jsou jádro a měly by jít po sobě. Kroky 5–8 jsou do velké míry
 nezávislé a lze je řadit podle priority. Krok 9 je budoucí verze.
 
+**Persistentní vrstva** (§4.4) — herní čas, claimy, řetězec činností — je
+největší budoucí blok za rámcem tohoto seznamu. Získá vlastní roadmapu a návrh
+datového modelu (napojený na `db_design.md`), až k ní vývoj dojde.
+
 ---
 
 ## 12. Otevřené otázky
@@ -461,8 +587,15 @@ nezávislé a lze je řadit podle priority. Krok 9 je budoucí verze.
 | OQ-6 | Vykreslení mapy — kdy (a zda) přejít z Canvas 2D na WebGL | §3.2 |
 | OQ-7 | Přesný formát URL JPL SBDB lookup | §6 |
 | OQ-8 | Bezpečnost klíčů Supabase — výměna legacy `anon` JWT za publishable klíč | `db_design.md` §9.2 bod 1 |
+| OQ-9 | Velikost denního rozpočtu herního času a převodní poměr reálné minuty ↔ herní dny/týdny/měsíce | §1.1 |
+| OQ-10 | Pirátský prvek — vyhledávání cizích claimů a těžba „na černo"; zda a jak | §1.1 |
+| OQ-11 | Claimy — doba platnosti, pravidla obchodu, právní rámec | §1.1 |
+| OQ-12 | Mechanika base — kolik bází, náklady na změnu, vazba na denní cyklus | §1.1 |
 
 ---
 
 *v1 — 2026-05-21 — výchozí návrh: architektura aplikace, tech stack, hybridní
-model letu, multiplayer presence, vzdělávací vrstva, AI workflow, roadmapa*
+model letu, multiplayer presence, vzdělávací vrstva, AI workflow, roadmapa*  
+*v1.1 — 2026-05-21 — doplněna cílová vize (§1.1): denní herní čas, persistentní
+vrstva, řetězec činností, claimy, sdílený vesmír; door-keeping principy (§1.2),
+server-autorita (§3.5), herní čas vázaný na model letu (§5.7)*
