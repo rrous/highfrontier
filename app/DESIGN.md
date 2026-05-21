@@ -341,23 +341,51 @@ zúžit kvůli prostoru (otevřený bod, §12).
 
 ## 8. AI-asistovaný design workflow
 
-Vývoj aplikace využívá AI nástroje záměrně a soustavně:
+Vývoj aplikace využívá AI nástroje záměrně a soustavně. Je důležité oddělit dvě
+různé věci, které mají různé technické nároky.
 
-- **Návrh UI** — Claude (a Claude Design) pro návrh a iteraci web a mobilního
-  rozhraní; výhledově i podklady pro Godot scény.
-- **Generování obrázků těles** — AI generování vizualizací průletů kolem
-  asteroidů. Zamýšlený pipeline:
-  1. Vygenerovat obrázek průletu pro dané těleso (vstup: spektrální třída, tvar,
-     velikost, albedo — parametry z `db_design.md` / `highfrontier_poc_design_v04.md`).
-  2. Schválení (lidská kontrola, aby obrázek odpovídal vědeckým parametrům tělesa).
-  3. Upload do **Supabase Storage**.
-  4. Odkaz na obrázek se uloží k tělesu a klient ho cachuje.
-- **Vazba na vizuální systém** — generované obrázky musí respektovat spektrální
-  paletu a charakter podle `highfrontier_poc_design_v04.md` §9. AI generování je
-  doplněk, ne náhrada procedurálního vizuálního systému.
+### 8.1 Návrh a kód UI — Claude
 
-Tento workflow je nyní popsán jako směr; jeho realizace je samostatný krok
-roadmapy (§11).
+Pro návrh a iteraci web a mobilního rozhraní (výhledově i podkladů pro Godot
+scény) **není potřeba žádný speciální produkt ani nastavení**. Claude pracuje ve
+dvou režimech:
+
+- **Claude Code** — generuje rovnou komponenty do repozitáře (`app/ui/`).
+- **claude.ai s artefakty** — umí vytvořit klikací HTML/React mockup k prohlédnutí
+  v prohlížeči ještě před napsáním produkčního kódu.
+
+Aby návrh probíhal hladce, je vhodné mít připravené dva vstupy (nejsou blokery,
+ale výrazně pomáhají — viz krok roadmapy v §11):
+
+- **Design tokeny** — barvy, rozestupy, typografie jako jeden zdroj pravdy
+  v `app/ui/`. Spektrální paleta už existuje v `highfrontier_poc_design_v04.md`
+  §9.2 — stačí ji odtud vytáhnout.
+- **Soupis komponent a breakpointů** — co se kreslí a pro jaké rozměry (PC vs.
+  mobil), aby měl návrh jasné zadání.
+
+### 8.2 Generování obrázků průletů — samostatný image model
+
+Vizualizace průletů kolem asteroidů jsou **odlišný úkol**: Claude je textový/kódový
+model a obrázky negeneruje. Tato část workflow proto **vyžaduje navíc** samostatný
+image model (např. Imagen, DALL·E, Stable Diffusion) a jeho API klíč/přístup.
+Volba konkrétního modelu je otevřený bod (§12).
+
+Zamýšlený pipeline:
+
+1. Vygenerovat obrázek průletu pro dané těleso samostatným image modelem (vstup:
+   spektrální třída, tvar, velikost, albedo — parametry z `db_design.md` /
+   `highfrontier_poc_design_v04.md`).
+2. Schválení (lidská kontrola, aby obrázek odpovídal vědeckým parametrům tělesa).
+3. Upload do **Supabase Storage**.
+4. Odkaz na obrázek se uloží k tělesu a klient ho cachuje.
+
+### 8.3 Vazba na vizuální systém
+
+Generované obrázky musí respektovat spektrální paletu a charakter podle
+`highfrontier_poc_design_v04.md` §9. AI generování obrázků je doplněk, ne náhrada
+procedurálního vizuálního systému.
+
+Realizace image pipeline (§8.2) je samostatný krok roadmapy (§11).
 
 ---
 
@@ -401,19 +429,23 @@ Pořadí kroků. Každý krok produkuje něco spustitelného a ověřitelného.
 
 1. **Skelet `app/` a tech stack** — Vite + TypeScript + UI framework, prázdná
    adresářová struktura (§3.1), spustitelný „hello world".
-2. **Přenos Route Planneru** — přesun mechaniky z `hf_route_planner_API.html` do
+2. **Design tokeny a soupis komponent** — vytáhnout spektrální paletu a další
+   tokeny do `app/ui/`, sepsat komponenty a breakpointy (PC/mobil) jako zadání
+   pro návrh UI (§8.1). Malý krok, ale zrychluje vše další.
+3. **Přenos Route Planneru** — přesun mechaniky z `hf_route_planner_API.html` do
    nové modulární struktury (`game/`, `ui/`, `data/`), funkčně rovnocenný
    prototypu.
-3. **Přeladění fyziky na reálné jednotky** — náprava konstant podle §5.4;
+4. **Přeladění fyziky na reálné jednotky** — náprava konstant podle §5.4;
    hybridní model letu (§5).
-4. **JPL odkazy** — klikatelný odkaz na SBDB v INFO panelu (§6).
-5. **Vzdělávací vrstva** — glosář, vysvětlivky, externí odkazy (§7).
-6. **Efemerní multiplayer presence** — modul `net/`, Supabase Realtime (§4).
-7. **AI image pipeline** — generování a ukládání obrázků průletů (§8).
-8. **Konfigurace lodi a filtry mapy** — viz §9; vlastní návrh před realizací.
+5. **JPL odkazy** — klikatelný odkaz na SBDB v INFO panelu (§6).
+6. **Vzdělávací vrstva** — glosář, vysvětlivky, externí odkazy (§7).
+7. **Efemerní multiplayer presence** — modul `net/`, Supabase Realtime (§4).
+8. **AI image pipeline** — výběr image modelu a generování/ukládání obrázků
+   průletů (§8.2).
+9. **Konfigurace lodi a filtry mapy** — viz §9; vlastní návrh před realizací.
 
-Kroky 1–3 jsou jádro a měly by jít po sobě. Kroky 4–7 jsou do velké míry
-nezávislé a lze je řadit podle priority. Krok 8 je budoucí verze.
+Kroky 1–4 jsou jádro a měly by jít po sobě. Kroky 5–8 jsou do velké míry
+nezávislé a lze je řadit podle priority. Krok 9 je budoucí verze.
 
 ---
 
@@ -424,7 +456,7 @@ nezávislé a lze je řadit podle priority. Krok 8 je budoucí verze.
 | OQ-1 | Svelte vs. React — finální volba po prototypovém kroku | §3.2, krok 1 |
 | OQ-2 | Balanc reálné fyziky — konkrétní hodnoty `SPEED`, `Ve`, rozpočtů delta-v | §5.4, krok 3 |
 | OQ-3 | Rozsah vzdělávací vrstvy na mobilu vs. PC | §7 |
-| OQ-4 | Rozsah AI image pipeline — kolik těles, jak často, schvalovací proces | §8 |
+| OQ-4 | Výběr image modelu pro generování průletů (Imagen / DALL·E / SD) + rozsah pipeline (kolik těles, jak často, schvalovací proces) | §8.2 |
 | OQ-5 | Struktura persistentní vrstvy pro dávkové sdílení katalogů | §4.4 |
 | OQ-6 | Vykreslení mapy — kdy (a zda) přejít z Canvas 2D na WebGL | §3.2 |
 | OQ-7 | Přesný formát URL JPL SBDB lookup | §6 |
