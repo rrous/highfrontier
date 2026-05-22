@@ -1,4 +1,3 @@
-TMP/
 __pycache__/
 pipeline/.data_cache/
 *.py[cod]
