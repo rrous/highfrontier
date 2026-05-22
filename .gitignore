@@ -7,7 +7,6 @@ pipeline/.data_cache/
 dist/
 build/
 .env
-raw_data/*.json
-!raw_data/flora_full.json
+raw_data/
 app/node_modules/
 app/dist/
