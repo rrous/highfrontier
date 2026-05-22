@@ -1,0 +1,70 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main, html-client]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PROD (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
+
+      - name: Checkout DEV (html-client)
+        uses: actions/checkout@v4
+        with:
+          ref: html-client
+          path: dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build PROD
+        working-directory: prod/app
+        run: |
+          npm ci
+          npm run build -- --base=/highfrontier/
+
+      - name: Build DEV
+        working-directory: dev/app
+        run: |
+          npm ci
+          npm run build -- --base=/highfrontier/dev/
+
+      - name: Assemble site
+        run: |
+          mkdir -p site/dev
+          cp -r prod/app/dist/. site/
+          cp -r dev/app/dist/. site/dev/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
