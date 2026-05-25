@@ -53,11 +53,29 @@ flowchart TD
 
 ```
 vlastnosti:
-  pohyb:     newtonská fyzika (zjednodušená) — palivo = delta-v
-  palivo:    omezený zásobník, viditelný HUD
-  čas:       odpočítávání od startu scénáře
-  skener:    aktivní nástroj s dosahem a zorným úhlem
-  katalog:   narůstající databáze skenů
+  pohyb:    iontový pohon / NTR / VASIMR (volba motoru = herní styl)
+  palivo:   H₂O (propellant) — omezený zásobník, viditelný HUD
+  čas:      1 herní den = 1 měsíc reálné mise
+  skener:   aktivní nástroj s dosahem a zorným úhlem
+  katalog:  narůstající databáze skenů
+```
+
+**Tři třídy motorů — volba před misí:**
+
+| Motor | Styl hry | Dosah/měsíc | Zastávky | Průlety | Přistání |
+|---|---|---|---|---|---|
+| Iontový | Průzkumník — mnoho průletů | 5–8 mil. km | 0–1 | 10–30 | ✗ |
+| NTR | Všestranný — zastávky i dosah | 3–4 mil. km | 2–5 | 5–15 | ✓ |
+| VASIMR | Flexibilní — přepíná režimy | 4–7 mil. km | 1–3 | 15–25 | hraničně |
+
+**Pohybová mechanika (NTR jako referenční):**
+```
+fáze zrychlení:  ~25 s na 1 km/s  (vysoký tah)
+peak rychlost:   2–4 km/s
+dosah při Δv 5 km/s: ½ × 2.5 km/s × 30 dní × 86 400 s = 3.24 mil. km
+
+průzkumné Δv se odečítá z měsíčního budgetu
+→ více průzkumu = kratší dosah večerního přesunu base
 ```
 
 ### 3.2 Asteroid
@@ -610,9 +628,10 @@ gantt
 ---
 
 *Dokument je živý — aktualizovat při každém designovém rozhodnutí.*  
-*v0.2 — 2026-05-06 — přidány sekce 6–9 (meta-mapa, DB, rodiny, vizuální systém)*  
-*v0.3 — 2026-05-10 — kompletní matematický model povrchu, S-typ parametrická sada, surface inclusion systém, průmyslová hodnota prvků*  
-*v0.4 — 2026-05-18 — resource taxonomy, Tier data systém průletu/zastávky, stavební materiály, UNKNOWN kategorie*
+*v0.2 — 2026-05-06 — přidány sekce 6–9 (meta-mapa, DB, rodiny, vizuální systém)*
+*v0.3 — 2026-05-10 — kompletní matematický model povrchu, S-typ parametrická sada, surface inclusion systém*
+*v0.4 — 2026-05-18 — resource taxonomy, Tier data systém průletu/zastávky*
+*v0.5 — 2026-05-25 — motory (Ion/NTR/VASIMR), herní den = 1 měsíc, relativní vektory, vzdělávací obsah*
 
 ---
 
