@@ -23,7 +23,7 @@ původního návrhu v0.1 níže:
 mapuje vědecký katalog na schéma route planneru) → Supabase. Migrace schématu je
 v `pipeline/migration_route_planner.sql`, proximity dotaz pro klienta v
 `pipeline/rpc_nearby_asteroids.sql` (funkce `nearby_asteroids` — vrátí tělesa
-v zadaném dosahu, seřazená podle 3D delta-v, strop 100).
+v zadaném dosahu, seřazená podle fyzické 3D vzdálenosti (km), strop 100).
 
 **Pozor:** kalibrační cíle (sekce 3, 7, 8) byly laděné na 10 000 těles. Při
 13 786 tělesech jsou absolutní počty rare finds a užitečných těles odpovídajícím
@@ -417,10 +417,12 @@ Hráč se postupně naučí:
 - **Rare finds:** nemají vlastní tabulku — promítají se do `asteroid_tier3.special`
   a `eco`. (Pokud bude potřeba filtrovat „kde je find X", bude nutná samostatná
   tabulka — viz 9.2.)
-- **Pozice / API scény:** tělesa mají souřadnice v proper-element rychlostním
-  prostoru (`x_pos`, `y_pos`, `z_pos`; m/s). Klient si scénu stahuje funkcí
-  `nearby_asteroids(qx, qy, qz, radius, max_n)` — max 100 těles seřazených podle
-  3D delta-v.
+- **Pozice / API scény:** tělesa mají v DB uloženy **oskulující orbitální elementy**
+  (`a, e, i, om, w, ma, epoch_jd`). Fyzické souřadnice (x, y, z, vx, vy, vz) se
+  počítají Keplerovou propagací na datum mise (viz sekce 11.6 — denní snapshoty).
+  Klient si scénu stahuje z tabulky `scene_snapshots` funkcí
+  `nearby_asteroids(base_id, date, radius_km, max_n)` — max 100 těles seřazených
+  podle fyzické vzdálenosti v km.
 
 ### 9.2 Otevřené body
 
@@ -435,7 +437,8 @@ Hráč se postupně naučí:
 
 3. **Konstanty ceny trasy v klientovi.** `SPEED`, `DV_STOP`, `DV_RETURN`,
    `fuelUsed` v route planneru počítají v procentním prostoru mapy — po přechodu
-   na rychlostní souřadnice je třeba je přeladit na škálu delta-v (herní balance).
+   na fyzické souřadnice (km) z Keplerovy propagace je třeba je přeladit na
+   reálnou škálu delta-v a vzdáleností (herní balance).
 
 4. **Filtrovatelnost rare finds.** Pokud má hra umět dotaz „najdi tělesa
    s nálezem X", samotný textový `special` nestačí — bude potřeba indexovaná
@@ -444,8 +447,10 @@ Hráč se postupně naučí:
 5. **Shape model URI:** pro backbone tělesa s DAMIT modelem — URL na DAMIT,
    cache OBJ v Supabase Storage, nebo nic. (Neřešeno.)
 
-6. **Time evolution:** orbitální elementy jsou statické; rychlostní souřadnice
-   nemají orbitální fázi. Pro pohyb těles v čase chybí model.
+6. **Time evolution:** orbitální elementy jsou statické v DB. Fyzické polohy
+   pro libovolné datum se počítají Keplerovou propagací (bez perturbací planet,
+   chyba ~100 000 km pro 10 let — pro filtr fyzické blízkosti dostačující).
+   Pro přesné polohy konkrétních těles lze volitelně použít JPL Horizons API.
 
 7. **API caching:** scéna ~100 těles ≈ 500 KB JSON. Cache na edge / CDN?
 
@@ -490,9 +495,30 @@ d = n·a × √( k₁·(Δa/a)² + k₂·(Δe)² + k₃·(Δsin i)² )
 k₁=5/4, k₂=2, k₃=2,  n·a ≈ 20 km/s pro Flora region
 ```
 
-### 10.3 Filtr blízkých těles (statický snapshot)
+### 10.3 Filtr blízkých těles
 
-Doporučený threshold pro jednu scénu (~20–50 těles): **150 m/s** Zappalà vzdálenosti od středu scény. Fyzická blízkost se ověřuje Keplerovou propagací oskulujících elementů na datum mise.
+**Primární filtr — fyzická vzdálenost (Keplerova propagace):**
+
+```
+pro každé těleso v DB:
+  (x, y, z) = elements_to_cartesian(a, e, i, Ω, ω, M₀, epoch_jd → target_jd)
+  d_km = |r_těleso - r_base|
+  → zachovat tělesa s d_km < threshold
+```
+
+Doporučený threshold pro jednu scénu (~20–50 těles): **10–50 mil. km** od base.
+Výsledek: ~50 těles fyzicky dostupných v daný měsíc mise (ověřeno výpočtem pro 8 Flora).
+
+**Zappalàova metrika** zůstává jako **atribut trasy** (cena delta-V mezi dvojicí těles),
+ne jako filtr scény:
+
+```
+d_Zapp = n·a × √( k₁·(Δa/a)² + k₂·(Δe)² + k₃·(Δsin i)² )
+k₁=5/4, k₂=2, k₃=2,  n·a ≈ 20 km/s pro Flora region
+```
+
+Zappalà vzdálenost ~77 m/s (např. Flora↔Petermrva) = minimální Δv pro změnu orbity
+při optimálním fázování. Zobrazuje se jako barva spojnice v route planneru.
 
 ---
 
