@@ -27,3 +27,14 @@ SELECT 'Flora', a.id
 FROM asteroids a
 WHERE a.name = 'Flora'
 ON CONFLICT (name) DO NOTHING;
+
+-- RLS: the list of bases is public (anyone can see which bases exist).
+-- Writes happen offline under service_role, which bypasses RLS.
+ALTER TABLE bases ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS bases_read ON bases;
+CREATE POLICY bases_read
+    ON bases
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);

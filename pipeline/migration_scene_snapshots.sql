@@ -44,3 +44,15 @@ CREATE TABLE IF NOT EXISTS scene_snapshots (
 
 CREATE INDEX IF NOT EXISTS scene_snapshots_date_idx
     ON scene_snapshots (snapshot_date);
+
+-- RLS: scenes are public read-only catalog data (derived from public JPL data).
+-- The daily snapshot job writes under service_role, which bypasses RLS — so
+-- no INSERT/UPDATE policy is added on purpose.
+ALTER TABLE scene_snapshots ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS scene_snapshots_read ON scene_snapshots;
+CREATE POLICY scene_snapshots_read
+    ON scene_snapshots
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
