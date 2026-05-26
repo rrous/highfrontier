@@ -8,8 +8,10 @@ elements propagated to the mission date. This script is the offline job that
 produces one row per (base, date).
 
 Inputs (from Supabase):
-    - `asteroids` rows with osculating elements (a_au, e, i_deg, node_deg,
-      peri_deg, ma_deg, epoch_jd). Rows missing any of these are skipped.
+    - `asteroids` rows with osculating elements (a_au_osc, e_osc, i_deg_osc,
+      node_deg, peri_deg, ma_deg, epoch_jd). Rows missing any of these are
+      skipped. Proper elements (a_au, e, i_deg) are NOT used here — they are
+      averaged over ~1 Myr and unsuitable as a Kepler propagation start.
     - `bases` rows joined to their host asteroid (Flora is the first base).
 
 Output:
