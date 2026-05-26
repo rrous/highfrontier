@@ -134,7 +134,8 @@ def fetch_sbdb_elements(numbers: set[int], use_cache: bool = True) -> dict[int, 
 
 # ── Supabase IO ──────────────────────────────────────────────────────────────
 
-def make_client():
+def make_client() -> tuple[object, str, str]:
+    """Return (supabase client, url, service_key) — url/key are reused for raw PATCH."""
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
@@ -143,7 +144,7 @@ def make_client():
             "fetch_osculating_elements.py."
         )
     from supabase import create_client
-    return create_client(url, key)
+    return create_client(url, key), url, key
 
 
 def load_asteroid_numbers(sb) -> set[int]:
@@ -164,11 +165,28 @@ def load_asteroid_numbers(sb) -> set[int]:
     return ids
 
 
-def upsert_elements(sb, elements: dict[int, dict]) -> None:
-    """Upsert the fetched osculating elements into `asteroids`."""
-    rows = [
-        {
-            "id":        num,
+def upsert_elements(sb, url: str, key: str, elements: dict[int, dict]) -> None:
+    """
+    Update osculating-element columns on existing `asteroids` rows.
+
+    Uses parallel PostgREST PATCH per row instead of `.upsert()`: PostgREST
+    upsert tries the INSERT path first and fails NOT NULL checks for columns
+    we don't carry here (e.g. `name`), even when a matching row already
+    exists. PATCH avoids that: it's a pure UPDATE keyed by `id`.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import requests
+
+    headers = {
+        "apikey":        key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type":  "application/json",
+        "Prefer":        "return=minimal",
+    }
+    session = requests.Session()
+
+    def patch_one(num: int, vals: dict) -> tuple[int, int]:
+        body = {
             "a_au_osc":  vals["a"],
             "e_osc":     vals["e"],
             "i_deg_osc": vals["i"],
@@ -177,12 +195,33 @@ def upsert_elements(sb, elements: dict[int, dict]) -> None:
             "ma_deg":    vals["ma"],
             "epoch_jd":  vals["epoch"],
         }
-        for num, vals in elements.items()
-    ]
-    log.info("Upserting osculating elements for %d asteroids …", len(rows))
-    for i in range(0, len(rows), UPSERT_PAGE):
-        sb.table("asteroids").upsert(rows[i:i + UPSERT_PAGE], on_conflict="id").execute()
-        log.info("  %d/%d", min(i + UPSERT_PAGE, len(rows)), len(rows))
+        r = session.patch(
+            f"{url}/rest/v1/asteroids?id=eq.{num}",
+            headers=headers,
+            json=body,
+            timeout=30,
+        )
+        return num, r.status_code
+
+    log.info("Updating osculating elements for %d asteroids (parallel PATCH) …",
+             len(elements))
+    done = 0
+    failures: list[tuple[int, int]] = []
+    with ThreadPoolExecutor(max_workers=24) as pool:
+        futs = [pool.submit(patch_one, num, vals) for num, vals in elements.items()]
+        for fut in as_completed(futs):
+            num, status = fut.result()
+            done += 1
+            if status >= 300:
+                failures.append((num, status))
+            if done % 1000 == 0 or done == len(elements):
+                log.info("  %d/%d (%d failures so far)", done, len(elements), len(failures))
+
+    if failures:
+        log.warning("Update failures: %d rows. First few: %s",
+                    len(failures), failures[:5])
+    else:
+        log.info("All %d rows updated.", done)
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
@@ -193,7 +232,7 @@ def main() -> None:
     ap.add_argument("--no-cache", action="store_true", help="ignore on-disk SBDB cache")
     args = ap.parse_args()
 
-    sb = make_client()
+    sb, sb_url, sb_key = make_client()
     numbers = load_asteroid_numbers(sb)
     if not numbers:
         raise SystemExit("`asteroids` table is empty — load the catalog first.")
@@ -206,7 +245,7 @@ def main() -> None:
     if not elements:
         raise SystemExit("No osculating elements fetched — nothing to upsert.")
 
-    upsert_elements(sb, elements)
+    upsert_elements(sb, sb_url, sb_key, elements)
     log.info("Done. Run pipeline/snapshot_daily.py next to materialize the scene.")
 
 
