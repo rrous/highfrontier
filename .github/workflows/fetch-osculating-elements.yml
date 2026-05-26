@@ -1,0 +1,49 @@
+name: Fetch SBDB osculating elements
+
+# Queries JPL SBDB for osculating orbital elements of every asteroid in the
+# `asteroids` table and upserts them into the osculating-element columns
+# (a_au_osc / e_osc / i_deg_osc / node_deg / peri_deg / ma_deg / epoch_jd).
+# Run once after `migration_orbital_elements.sql`, then on demand when JPL
+# refreshes the osculating epoch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: "Ignore on-disk SBDB cache (force re-query)"
+        type: boolean
+        required: false
+        default: false
+      limit:
+        description: "Debug: stop after N matched rows (blank = all)"
+        required: false
+        default: ""
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install supabase requests
+
+      - name: Fetch and upsert
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.no_cache }}" = "true" ]; then
+            ARGS="$ARGS --no-cache"
+          fi
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"
+          fi
+          python pipeline/fetch_osculating_elements.py $ARGS

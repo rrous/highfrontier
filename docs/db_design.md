@@ -23,7 +23,7 @@ původního návrhu v0.1 níže:
 mapuje vědecký katalog na schéma route planneru) → Supabase. Migrace schématu je
 v `pipeline/migration_route_planner.sql`, proximity dotaz pro klienta v
 `pipeline/rpc_nearby_asteroids.sql` (funkce `nearby_asteroids` — vrátí tělesa
-v zadaném dosahu, seřazená podle 3D delta-v, strop 100).
+v zadaném dosahu, seřazená podle fyzické 3D vzdálenosti (km), strop 100).
 
 **Pozor:** kalibrační cíle (sekce 3, 7, 8) byly laděné na 10 000 těles. Při
 13 786 tělesech jsou absolutní počty rare finds a užitečných těles odpovídajícím
@@ -417,10 +417,12 @@ Hráč se postupně naučí:
 - **Rare finds:** nemají vlastní tabulku — promítají se do `asteroid_tier3.special`
   a `eco`. (Pokud bude potřeba filtrovat „kde je find X", bude nutná samostatná
   tabulka — viz 9.2.)
-- **Pozice / API scény:** tělesa mají souřadnice v proper-element rychlostním
-  prostoru (`x_pos`, `y_pos`, `z_pos`; m/s). Klient si scénu stahuje funkcí
-  `nearby_asteroids(qx, qy, qz, radius, max_n)` — max 100 těles seřazených podle
-  3D delta-v.
+- **Pozice / API scény:** tělesa mají v DB uloženy **oskulující orbitální elementy**
+  (`a, e, i, om, w, ma, epoch_jd`). Fyzické souřadnice (x, y, z, vx, vy, vz) se
+  počítají Keplerovou propagací na datum mise (viz sekce 11.6 — denní snapshoty).
+  Klient si scénu stahuje z tabulky `scene_snapshots` funkcí
+  `nearby_asteroids(base_id, date, radius_km, max_n)` — max 100 těles seřazených
+  podle fyzické vzdálenosti v km.
 
 ### 9.2 Otevřené body
 
@@ -435,7 +437,8 @@ Hráč se postupně naučí:
 
 3. **Konstanty ceny trasy v klientovi.** `SPEED`, `DV_STOP`, `DV_RETURN`,
    `fuelUsed` v route planneru počítají v procentním prostoru mapy — po přechodu
-   na rychlostní souřadnice je třeba je přeladit na škálu delta-v (herní balance).
+   na fyzické souřadnice (km) z Keplerovy propagace je třeba je přeladit na
+   reálnou škálu delta-v a vzdáleností (herní balance).
 
 4. **Filtrovatelnost rare finds.** Pokud má hra umět dotaz „najdi tělesa
    s nálezem X", samotný textový `special` nestačí — bude potřeba indexovaná
@@ -444,8 +447,10 @@ Hráč se postupně naučí:
 5. **Shape model URI:** pro backbone tělesa s DAMIT modelem — URL na DAMIT,
    cache OBJ v Supabase Storage, nebo nic. (Neřešeno.)
 
-6. **Time evolution:** orbitální elementy jsou statické; rychlostní souřadnice
-   nemají orbitální fázi. Pro pohyb těles v čase chybí model.
+6. **Time evolution:** orbitální elementy jsou statické v DB. Fyzické polohy
+   pro libovolné datum se počítají Keplerovou propagací (bez perturbací planet,
+   chyba ~100 000 km pro 10 let — pro filtr fyzické blízkosti dostačující).
+   Pro přesné polohy konkrétních těles lze volitelně použít JPL Horizons API.
 
 7. **API caching:** scéna ~100 těles ≈ 500 KB JSON. Cache na edge / CDN?
 
@@ -457,3 +462,199 @@ Hráč se postupně naučí:
 
 *v0.1 — 2026-05-18 — výchozí návrh: resource catalog (52 položek), composition templates (8 tříd), rare finds matrix (18 nálezů), užitečnostní rozvaha*  
 *v0.2 — 2026-05-20 — sekce 0 (stav implementace): nasazeno 13 786 těles, 3-tabulkové schéma, ETL + RPC; aktualizována distribuce a otevřené body*
+
+---
+
+## 10. Proper elements — získání dat a mapa pole
+
+### 10.1 Zdroj a postup stažení
+
+**AstDyS-2** (`newton.spacedys.com/astdys`) poskytuje proper elements pro >600 000 číslovaných těles.
+
+Postup:
+1. `newton.spacedys.com/astdys/index.php?pc=5` → sekce "Synthetic proper elements"
+2. Stáhnout bulk soubor `allnum.syn` (~30 MB)
+3. Formát: `asteroid_number  a_p  e_p  sin(i_p)  σ_a  σ_e  σ_sin(i)  ...`
+4. Filtrovat dle Flora family membership → ~13 000–14 000 řádků
+
+> ⚠ Proper elements nejsou pro všechna tělesa — unnumbered a single-opposition mají jen osculating.
+
+### 10.2 2D mapa pole — layout v prostoru vlastních elementů
+
+**Osy mapy:**
+```
+X = a_p   (vlastní velká poloosa)    rozsah Flora: 2.17 – 2.33 AU
+Y = e_p   (vlastní excentricita)     rozsah Flora: 0.05 – 0.20
+```
+
+Vzdálenost dvou bodů v tomto prostoru odpovídá Zappalàově metrice — mapa je zároveň polohová i delta-V smysluplná. Flora rodina tvoří přirozený cluster; interlopeři leží mimo centrum hustoty.
+
+**Zappalàova metrika:**
+```
+d = n·a × √( k₁·(Δa/a)² + k₂·(Δe)² + k₃·(Δsin i)² )
+k₁=5/4, k₂=2, k₃=2,  n·a ≈ 20 km/s pro Flora region
+```
+
+### 10.3 Filtr blízkých těles
+
+**Primární filtr — fyzická vzdálenost (Keplerova propagace):**
+
+```
+pro každé těleso v DB:
+  (x, y, z) = elements_to_cartesian(a, e, i, Ω, ω, M₀, epoch_jd → target_jd)
+  d_km = |r_těleso - r_base|
+  → zachovat tělesa s d_km < threshold
+```
+
+Doporučený threshold pro jednu scénu (~20–50 těles): **10–50 mil. km** od base.
+Výsledek: ~50 těles fyzicky dostupných v daný měsíc mise (ověřeno výpočtem pro 8 Flora).
+
+**Zappalàova metrika** zůstává jako **atribut trasy** (cena delta-V mezi dvojicí těles),
+ne jako filtr scény:
+
+```
+d_Zapp = n·a × √( k₁·(Δa/a)² + k₂·(Δe)² + k₃·(Δsin i)² )
+k₁=5/4, k₂=2, k₃=2,  n·a ≈ 20 km/s pro Flora region
+```
+
+Zappalà vzdálenost ~77 m/s (např. Flora↔Petermrva) = minimální Δv pro změnu orbity
+při optimálním fázování. Zobrazuje se jako barva spojnice v route planneru.
+
+---
+
+## 11. Herní čas, pohyb lodi a snapshoty
+
+### 11.1 Herní den = 1 reálný měsíc mise
+
+Jeden "herní den" odpovídá **1 měsíci reálného mise času**. Hráč v průběhu dne prozkoumá asteroidy v okolí aktuální base, večer spustí přesun na novou base.
+
+### 11.2 Motory — fyzikální model průzkumných lodí
+
+Pro průzkumné mise jsou relevantní tři třídy motorů. Chemický pohon je vyřazen — příliš nízký Isp pro vzdálenosti asteroid beltu.
+
+#### Přehled
+
+| Motor | Isp | Tah | Zrychlení | Čas na 1 km/s | Přistání | Reálnost | Cena/poruchovost |
+|---|---|---|---|---|---|---|---|
+| **Iontový / Hall** | 3 000 s | 0.5 N | 0.3 mm/s² | ~55 hod | ✗ | dnes (Dawn, Hayabusa2) | nízká / spolehlivý |
+| **NTR** (jaderný tepelný) | 900 s | 1 000 N | 670 mm/s² | ~25 s | ✓ | testováno, ne v provozu | střední / spolehlivý |
+| **VASIMR** | 3 000–30 000 s | 10–50 N | 7–33 mm/s² | 1–2 hod | hraničně | ~2030+ | vysoká / poruchový |
+
+#### Iontový motor (Ion / Hall effect)
+
+**Princip:** Xenon se ionizuje elektrickým výbojem, ionty se urychlují na 30–80 km/s. Tah je minimální, ale motor běží měsíce až roky.
+
+**Reálné příklady:** Dawn (Vesta + Ceres, Δv přes 11 km/s), Hayabusa2 (Ryugu).
+
+**Propellant a H₂O:** standardně Xenon/Krypton. Voda jako propellant možná (elektrolýza → O⁺ ionty), ale méně efektivní.
+
+**Herní role:** Průzkumník dlouhého dosahu — mnoho průletů, minimální zastávky.
+```
+Δv budget:   8–12 km/s / měsíc
+Dosah:       5–8 mil. km / měsíc
+Zastávky:    0–1 (brzdění trvá dny)
+Průlety:     10–30 / měsíc
+```
+
+**Vzdělávací obsah pro hráče:**
+> *"Iontový motor je jako větrný vůz — neuvěřitelně efektivní, ale nedokáže prudce zabočit. Dawn spotřebovala méně Xenonu než váha průměrného člověka a přesto změnila orbitu o 11 km/s. Nevýhoda: pokud chceš zastavit u asteroidu, začni brzdit týden předem."*
+
+---
+
+#### NTR — Jaderný tepelný motor (Nuclear Thermal Rocket)
+
+**Princip:** Jaderný reaktor zahřeje kapalný vodík (nebo vodu) na 2 500–3 000 K. Plyn se expanduje tryskou — tah srovnatelný s chemickým motorem, Isp 2–3× lepší.
+
+**Reálné příklady:**
+- NERVA (NASA, 1960–1972) — 20 funkčních testů, Isp 825 s, tah 33 000 N. Připraveno k letu na Mars, program zrušen Nixonem.
+- RD-0410 (SSSR) — paralelní vývoj, podobné parametry.
+- DRACO (NASA/DARPA, 2025+) — aktuální program, plánovaný letový test 2027.
+
+**Propellant a H₂O:** NTR může použít **vodu přímo** — reaktor ji přemění na přehřátou páru. Isp klesne na ~190 s (místo 900 s s H₂), ale voda je hustá, snadno skladovatelná a dostupná in-situ z C-typů. Klíčové herní propojení: **H₂O těžená z asteroidů = palivo NTR**.
+
+**Herní role:** Všestranný průzkumník — může zastavit, může přistát, rozumný dosah.
+```
+Δv budget:   4–6 km/s / měsíc
+Dosah:       3–4 mil. km / měsíc
+Zastávky:    2–5 / měsíc
+Průlety:     5–15 / měsíc
+Přistání:    ✓ (asteroidy s únikovou rychlostí < 3 m/s)
+```
+
+**Vzdělávací obsah pro hráče:**
+> *"NERVA byl připraven k letu na Mars v roce 1972 — dvakrát silnější a třikrát úspornější než chemické motory. Program zrušil Nixon, ne kvůli technice, ale kvůli rozpočtu. NTR může spalovat vodu přímo — nižší efektivita, ale žádný transport Xenonu ze Země. C-typ interloper v S-poli není jen vědecký nález — je to čerpací stanice."*
+
+---
+
+#### VASIMR — Variable Specific Impulse Magnetoplasma Rocket
+
+**Princip:** Plyn (Argon nebo H₂) se ionizuje a zahřívá radiofrekvenčními vlnami na miliony kelvinů. Plazma udržována magnetickým polem, urychlována magnetickou tryskou. **Isp je variabilní** — pilot přepíná mezi vysokým tahem (nízký Isp, manévry) a vysokou účinností (vysoký Isp, dosah).
+
+**Reálné příklady:**
+- Ad Astra Rocket Company (Franklin Chang-Díaz, astronaut, 7 letů raketoplánem) — VF-200 testován na Zemi, 200 kW, 5.7 N.
+- Žádný letový exemplář dosud. Plánované testování na ISS opakovaně odloženo.
+
+**Omezení:** Vyžaduje 200 kW+ energie — za orbitou Marsu nutný jaderný reaktor. Komplexní systém = vyšší poruchovost (herní mechanika).
+
+**Herní role:** Prémiový flexibilní motor — hráč přepíná režimy podle situace.
+```
+Δv budget:   6–10 km/s / měsíc (závisí na režimu)
+Dosah:       4–7 mil. km / měsíc
+Zastávky:    1–3 / měsíc (high-thrust režim)
+Průlety:     15–25 / měsíc (high-Isp režim)
+Poruchovost: herní mechanika — riziko výpadku, nutná údržba
+```
+
+**Vzdělávací obsah pro hráče:**
+> *"VASIMR je jako auto s převodovkou — první rychlost dá tah pro manévry, šestá rychlost šetří palivo na dálnici. Vynalezl ho Franklin Chang-Díaz, který strávil 20 let vývojem poté, co sedmkrát letěl do vesmíru. Zatím nikdy neletěl v provozu — fyzika funguje, ale systém je složitý. Ve hře to znamená: výkon za cenu rizika výpadku."*
+
+### 11.3 Relativní rychlostní vektor — směr rozhoduje
+
+Pro každé těleso v okolí base se počítá relativní pohyb:
+
+```python
+dr        = r_target - r_base
+dv        = v_target - v_base
+dr_unit   = dr / |dr|
+v_radial  = dot(dv, dr_unit)         # + = vzdaluje, - = přibližuje
+v_tang    = sqrt(|dv|² - v_radial²)
+dv_eff    = |v_tang| + max(0, v_radial)   # efektivní Δv pro rendezvous
+```
+
+| Situace | v_radial | Herní dopad |
+|---|---|---|
+| Těleso se přibližuje | < 0 | Levné — přiletí samo |
+| Těleso se vzdaluje | > 0 | Drahé — musíš dohnat |
+| Těleso letí kolmo | ≈ 0 | Boční manévr — středně drahé |
+
+### 11.4 2D projekce — inklinace
+
+Flora region: i < 9° → Z složka max 15 % chyba při X-Y projekci. PoC ignoruje Z; full game: Z jako třetí dimenze pohybu.
+
+### 11.5 Vizuální vektory v mapě
+
+```
+● Zelená šipka   dv_eff < 80 m/s     "přibližující / levné"
+● Žlutá šipka    80–300 m/s          "střední"
+● Červená šipka  > 300 m/s           "rychlé, drahé"
+
+Směr: projekce dv do 2D mapy
+Délka: log(dv_eff)
+```
+
+### 11.6 Snapshoty a pohyb base
+
+**Denní snapshot** (1× za 24 hodin):
+```
+offline job → Keplerova propagace 150k elementů na dnešní datum
+→ pro každou aktivní base: top 100 nejbližších těles + [x,y,z,vx,vy,vz]
+→ uložit do scene_snapshots (base_id, date, asteroid_data JSONB)
+```
+
+**Škálování:** 1 000 bases × 5 kB × 365 dní = ~1.8 GB/rok.
+
+---
+
+*v0.1 — 2026-05-18 — výchozí návrh*
+*v0.2 — 2026-05-20 — stav implementace: 13 786 těles, 3-tabulkové schéma*
+*v0.3 — 2026-05-25 — sekce 10 (proper elements, Zappalà mapa), sekce 11 (herní čas, motory Ion/NTR/VASIMR, relativní vektory, snapshoty)*
