@@ -156,17 +156,21 @@ def make_client():
 
 def fetch_asteroids(sb) -> list[dict]:
     """All asteroid rows with a complete osculating element set."""
-    cols = "id,name,spectral_type,a_au,e,i_deg,node_deg,peri_deg,ma_deg,epoch_jd"
+    cols = ("id,name,spectral_type,"
+            "a_au_osc,e_osc,i_deg_osc,node_deg,peri_deg,ma_deg,epoch_jd")
     rows: list[dict] = []
     page = 1000
     start = 0
     while True:
         r = (sb.table("asteroids")
              .select(cols)
-             .not_.is_("node_deg", "null")
-             .not_.is_("peri_deg", "null")
-             .not_.is_("ma_deg", "null")
-             .not_.is_("epoch_jd", "null")
+             .not_.is_("a_au_osc",  "null")
+             .not_.is_("e_osc",     "null")
+             .not_.is_("i_deg_osc", "null")
+             .not_.is_("node_deg",  "null")
+             .not_.is_("peri_deg",  "null")
+             .not_.is_("ma_deg",    "null")
+             .not_.is_("epoch_jd",  "null")
              .range(start, start + page - 1)
              .execute())
         batch = r.data or []
@@ -195,9 +199,9 @@ def build_snapshot(bodies: list[dict], base_id_in_bodies: int, target_jd: float)
     for row in bodies:
         try:
             state = propagate(
-                a_au=float(row["a_au"]),
-                ecc=float(row["e"]),
-                inc_deg=float(row["i_deg"]),
+                a_au=float(row["a_au_osc"]),
+                ecc=float(row["e_osc"]),
+                inc_deg=float(row["i_deg_osc"]),
                 node_deg=float(row["node_deg"]),
                 peri_deg=float(row["peri_deg"]),
                 ma0_deg=float(row["ma_deg"]),
