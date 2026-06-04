@@ -20,43 +20,38 @@ async function rpc(fn: string, body: Record<string, unknown>): Promise<unknown[]
   return r.json() as Promise<unknown[]>;
 }
 
-/** URL query params: ?x=&y=&z=&radius=&n=  (all optional; default = Flora-centered scene) */
+/** URL query params: ?base=&radius=&n=  (all optional; default = base 'Flora') */
 export async function loadScene(params: URLSearchParams): Promise<Scene> {
-  let qx = parseFloat(params.get('x') ?? '');
-  let qy = parseFloat(params.get('y') ?? '');
-  let qz = parseFloat(params.get('z') ?? '');
+  const baseName = params.get('base') ?? 'Flora';
   const radius = parseFloat(params.get('radius') ?? '');
   const wantN = parseInt(params.get('n') ?? '', 10) || 20;
-
-  // Default: center scene on Flora (name-lookup) — §fix-map-default-flora
-  if (!Number.isFinite(qx) || !Number.isFinite(qy)) {
-    const fl = await get('/rest/v1/asteroids?select=x_pos,y_pos,z_pos&name=eq.Flora&limit=1') as Array<{ x_pos: number; y_pos: number; z_pos: number | null }>;
-    if (!fl.length) throw new Error('Flora not found in DB');
-    qx = fl[0].x_pos;
-    qy = fl[0].y_pos;
-    qz = fl[0].z_pos ?? 0;
-  } else {
-    qz = Number.isFinite(qz) ? qz : 0;
-  }
-
   const searchRadius = Number.isFinite(radius) ? radius : 100_000;
-  const all = await rpc('nearby_asteroids', { qx, qy, qz, radius: searchRadius, max_n: 100 }) as Array<{
+
+  // surroundings of a named base — `db_design.md` §11.1, RPC `base_surroundings`.
+  // The base's own asteroid is included in the result at delta_v = 0.
+  const all = await rpc('base_surroundings', { base_name: baseName, radius: searchRadius, max_n: 100 }) as Array<{
     id: number; name: string; spectral_type: string;
     x_pos: number; y_pos: number; z_pos: number | null;
     r_size: number; albedo: number | null; diameter_km: number | null;
     mass_str: string | null; period_h: number | null; has_satellite: boolean;
     structure: string; h2o_level: number; eco: string[] | null;
     is_interloper: boolean; fast_rotation: boolean;
+    dx: number; dy: number; dz: number; delta_v: number;
   }>;
 
-  const flora = all.find(a => a.name === 'Flora');
-  const neighbours = all.filter(a => a.name !== 'Flora').slice(0, wantN);
-  const rawAsteroids = flora ? [...neighbours, flora] : neighbours;
+  const baseRow = all.find(a => a.name === baseName);
+  if (!baseRow) throw new Error(`Base ${baseName} not found in DB`);
+  const qx = baseRow.x_pos;
+  const qy = baseRow.y_pos;
+  const qz = baseRow.z_pos ?? 0;
+
+  const neighbours = all.filter(a => a.name !== baseName).slice(0, wantN);
+  const rawAsteroids = [...neighbours, baseRow];
 
   // Projection radius: furthest neighbour + 15% margin
   let projR = 0;
   neighbours.forEach(a => {
-    const d = Math.hypot(a.x_pos - qx, a.y_pos - qy);
+    const d = Math.hypot(a.dx, a.dy);
     if (d > projR) projR = d;
   });
   projR = projR * 1.15 || 1000;
@@ -75,13 +70,13 @@ export async function loadScene(params: URLSearchParams): Promise<Scene> {
   const t3 = Object.fromEntries(tier3Raw.map(t => [(t['asteroid_id'] as number), t]));
 
   const asteroids: Asteroid[] = rawAsteroids.map(a => {
-    const isFlora = a.name === 'Flora';
+    const isBase = a.name === baseName;
     return {
       id: a.id,
       name: a.name,
       type: (a.spectral_type as SpectralType) || 'U',
-      x: isFlora ? 55 : 50 + 50 * (a.x_pos - qx) / projR,
-      y: isFlora ? 58 : 50 + 50 * (a.y_pos - qy) / projR,
+      x: isBase ? 55 : 50 + 50 * a.dx / projR,
+      y: isBase ? 58 : 50 + 50 * a.dy / projR,
       r: a.r_size,
       vx: a.x_pos,
       vy: a.y_pos,
