@@ -422,7 +422,10 @@ Hráč se postupně naučí:
   počítají Keplerovou propagací na datum mise (viz sekce 11.6 — denní snapshoty).
   Klient si scénu stahuje z tabulky `scene_snapshots` funkcí
   `nearby_asteroids(base_id, date, radius_km, max_n)` — max 100 těles seřazených
-  podle fyzické vzdálenosti v km.
+  podle fyzické vzdálenosti v km. Každá položka snapshotu nese polohu XYZ
+  (km), rychlost XYZ (km/s) a deltaV XYZ vůči base včetně odvozeného
+  `dv_eff` (§11.3); pro dotaz spojený s katalogovými sloupci slouží
+  `base_surroundings_v2` (`pipeline/rpc_base_surroundings_v2.sql`).
 
 ### 9.2 Otevřené body
 
@@ -663,9 +666,19 @@ balancování.
 **Denní snapshot** (1× za 24 hodin):
 ```
 offline job → Keplerova propagace 150k elementů na dnešní datum
-→ pro každou aktivní base: top 100 nejbližších těles + [x,y,z,vx,vy,vz]
+→ pro každou aktivní base: top 100 nejbližších těles
+   + poloha XYZ [x,y,z] km, rychlost [vx,vy,vz] km/s (heliocentricky, J2000)
+   + offset od base [dx,dy,dz,d] km
+   + deltaV XYZ [dvx,dvy,dvz] km/s (v_těleso − v_base)
+   + odvozené |dv|, v_radial, v_tang, dv_eff (§11.3)
 → uložit do scene_snapshots (base_id, date, asteroid_data JSONB)
 ```
+
+Klient čte scénu přes `nearby_asteroids(base_id, date, radius_km, max_n)`
+(čisté JSONB) nebo `base_surroundings_v2(base_name, date, radius_km, max_n)`
+(snapshot + Tier-1 katalogové sloupce v jednom dotazu). Původní
+`base_surroundings` v proper-element prostoru je legacy — drží se jen do
+migrace klienta.
 
 **Škálování:** 1 000 bases × 5 kB × 365 dní = ~1.8 GB/rok.
 
