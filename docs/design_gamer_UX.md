@@ -190,7 +190,13 @@ function dvFlyby(prev, curr, next) {
 | Zastávka (stop) | 2 | = U-turn; decelerate + re-accelerate |
 | Návrat na BASE | 1 | fixní; počítá se jako poslední manévr |
 
-**Zastávka = U-turn** v ceně Δv — fyzikálně správně (`DV_STOP = 2.0`). Výhoda zastávky: libovolný směr odjezdu.
+**Zastávka = U-turn** v ceně Δv — v normalizovaném prostoru prototypu (`DV_STOP = 2.0`). Výhoda zastávky: libovolný směr odjezdu.
+
+> **Aktualizace (2026-06):** v reálné škále je cena zastávky **skutečné vyrovnání
+> rychlostí** `|v_cíl − v_aktuální|` daného segmentu — trasa se platí postupně po
+> segmentech, žádná fixní konstanta. Ověřeno proti JPL Horizons: rendezvous mezi
+> tělesy rodiny Flora stojí 0,5–4 km/s (dominuje rozdíl rovin drah). Viz
+> `app/DESIGN.md` §5.2 a `docs/horizons_verification.md`.
 
 #### Tsiolkovského rovnice
 
@@ -274,7 +280,10 @@ Route Planner `hf_route_planner_API.html` je napojený na živá data v Supabase
 - Konstanty ceny trasy (`SPEED`, `DV_STOP`, `DV_RETURN`, `Ve`, `fuelUsed`)
   počítají v procentním prostoru mapy. `dvFlyby` (úhel zahnutí) je vůči
   měřítku invariantní a platí dál, ale délka trasy, čas a palivo potřebují
-  přeladit na škálu delta-v v m/s — herní balanc.
+  přeladit na škálu delta-v v m/s — herní balanc. **Rozhodnuto (2026-06):**
+  fixní `DV_STOP`/`DV_RETURN` se ruší — cena zastávky je postupné vyrovnání
+  rychlostí po segmentech trasy (`app/DESIGN.md` §5.2); reálnou škálu
+  (0,5–4 km/s v rodině Flora) ověřuje `docs/horizons_verification.md`.
 - `SB_KEY` v HTML je legacy `anon` JWT klíč; po zakázání legacy klíčů
   v Supabase ho vyměnit za publishable klíč.
 - Monolitický HTML rozdělit na oddělený design a logiku, klient použitelný

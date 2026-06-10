@@ -1,7 +1,7 @@
 # Ověření poloh a Δv proti JPL Horizons
 
 - **Epocha:** 2026-06-04 00:00 UT
-- **Vygenerováno:** 2026-06-10 09:26 UTC
+- **Vygenerováno:** 2026-06-10 11:59 UTC
 - **Zdroj:** JPL Horizons API (`EPHEM_TYPE=VECTORS`)
 - **Rámec:** heliocentrický (Slunce, `500@10`), ekliptika J2000, jednotky km / km·s⁻¹
 - **Referenční těleso:** 8 Flora (A847 UA) (rec #8)
@@ -35,6 +35,21 @@
 | Begzhigitova | +322.2 | -153.2 | +988.0 | 1.050470 | 1050.5 |
 | Gerardfaure | +701.4 | -3673.4 | +1543.9 | 4.045909 | 4045.9 |
 | Elenacuoghi | -74.2 | -2154.6 | -347.6 | 2.183664 | 2183.7 |
+
+## Analýza přeletu — proč Δv vychází v km/s
+
+Oskulační dráha Flory: a = 2.2016 AU, e = 0.1562, i = 5.89°. Rozhodující nákladová položka je **vzájemný sklon rovin drah** (kombinace rozdílu sklonu i výstupného uzlu): otočení roviny při orbitální rychlosti ~17–19 km/s stojí `2·v·sin(Δi/2)`. Tento rozdíl nelze odstranit fázováním (čekáním na výhodnou polohu) — je to vlastnost drah, ne okamžiku.
+
+| těleso | a [AU] | e | i [°] | vzáj. sklon [°] | Δv roviny [km/s] | Δv v rovině [m/s] | odhad přeletu¹ [km/s] | okamžitý \|Δv\| [km/s] |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ulyanov | 2.2539 | 0.1372 | 3.37 | 8.55 | 2.556 | 235 | 2.88 | 2.818 |
+| Begzhigitova | 2.2238 | 0.1451 | 4.23 | 3.94 | 1.178 | 101 | 1.37 | 1.050 |
+| Gerardfaure | 2.2378 | 0.0613 | 3.59 | 4.77 | 1.427 | 163 | 1.68 | 4.046 |
+| Elenacuoghi | 2.2057 | 0.1213 | 7.16 | 1.37 | 0.410 | 19 | 0.52 | 2.184 |
+
+¹ změna roviny u aféru + Hohmann mezi velkými poloosami + únik z Flory (87 m/s); impulzní odhad nezávislý na fázi drah. Zanedbává sladění excentricity (u Gerardfaure významné) a zachycení u cílového tělesa (~m/s) — jde o dolní odhad. Tam, kde okamžitý |Δv| vychází výrazně výš než odhad přeletu (Gerardfaure, Elenacuoghi), rozdíl způsobuje aktuální fáze drah a dá se zlevnit načasováním; složka roviny (Ulyanov) se načasovat nedá.
+
+**Závěr pro herní model:** skutečná cena rendezvous mezi tělesy rodiny Flora je řádově **0,5–4 km/s**, nikoli fixních 150 m/s — trasa se musí platit **postupným vyrovnáváním rychlostí po segmentech** (`|v_cíl − v_aktuální|`), viz `app/DESIGN.md` §5.2 a `db_design.md` §11.3.
 
 ## Stavové vektory cílových těles
 

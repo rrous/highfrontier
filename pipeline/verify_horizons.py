@@ -33,7 +33,9 @@ from datetime import datetime, timezone
 import requests
 
 HORIZONS_API = "https://ssd.jpl.nasa.gov/api/horizons.api"
-AU_KM = 1.495978707e8  # 1 AU in km (IAU 2012)
+AU_KM = 1.495978707e8       # 1 AU in km (IAU 2012)
+MU_SUN = 1.32712440018e11   # heliocentric gravitational parameter, km³/s²
+V_ESC_FLORA_KMS = 0.0868    # escape velocity of Flora (sample_flora.json), km/s
 
 # Reference base body and the targets to verify.
 # In Horizons a trailing ";" marks a small-body record number — WITHOUT it,
@@ -111,6 +113,60 @@ def parse_vectors(record: str, text: str) -> dict:
     }
 
 
+def orbital_elements(s: dict) -> dict:
+    """Osculating a, e, i and the angular-momentum vector from a state vector."""
+    r = (s["x"], s["y"], s["z"])
+    v = (s["vx"], s["vy"], s["vz"])
+    rmag = math.sqrt(sum(c * c for c in r))
+    vmag = math.sqrt(sum(c * c for c in v))
+    a = -MU_SUN / (2 * (vmag * vmag / 2 - MU_SUN / rmag))
+    h = (r[1] * v[2] - r[2] * v[1],
+         r[2] * v[0] - r[0] * v[2],
+         r[0] * v[1] - r[1] * v[0])
+    hmag = math.sqrt(sum(c * c for c in h))
+    rv = sum(rc * vc for rc, vc in zip(r, v))
+    ev = tuple((vmag * vmag - MU_SUN / rmag) * r[i] / MU_SUN - rv * v[i] / MU_SUN
+               for i in range(3))
+    e = math.sqrt(sum(c * c for c in ev))
+    return {"a": a, "e": e, "i_deg": math.degrees(math.acos(h[2] / hmag)), "h": h}
+
+
+def transfer_estimate(flora_el: dict, target_el: dict) -> dict:
+    """
+    Rough optimized-transfer Δv (impulsive, phase-independent):
+      - plane change of the full mutual inclination, performed at the slower
+        of the two aphelion speeds (cheapest place to bend the plane),
+      - in-plane circular-to-circular Hohmann between the semi-major axes
+        (ignores eccentricity matching, so the in-plane part is a lower bound),
+      - escape from Flora's gravity well.
+    Capture at the target (few-km body) is ~m/s and ignored.
+    """
+    hF, hT = flora_el["h"], target_el["h"]
+    dot = sum(a * b for a, b in zip(hF, hT))
+    nF = math.sqrt(sum(c * c for c in hF))
+    nT = math.sqrt(sum(c * c for c in hT))
+    i_mut = math.acos(max(-1.0, min(1.0, dot / (nF * nT))))
+
+    def v_aphelion(el: dict) -> float:
+        Q = el["a"] * (1 + el["e"])
+        return math.sqrt(MU_SUN * (2 / Q - 1 / el["a"]))
+
+    v_slow = min(v_aphelion(flora_el), v_aphelion(target_el))
+    dv_plane = 2 * v_slow * math.sin(i_mut / 2)
+
+    r1, r2 = flora_el["a"], target_el["a"]
+    at = (r1 + r2) / 2
+    dv_inplane = (abs(math.sqrt(MU_SUN * (2 / r1 - 1 / at)) - math.sqrt(MU_SUN / r1))
+                  + abs(math.sqrt(MU_SUN / r2) - math.sqrt(MU_SUN * (2 / r2 - 1 / at))))
+
+    return {
+        "i_mut_deg": math.degrees(i_mut),
+        "dv_plane": dv_plane,
+        "dv_inplane": dv_inplane,
+        "dv_total": dv_plane + dv_inplane + V_ESC_FLORA_KMS,
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Verify positions/Δv vs JPL Horizons.")
     ap.add_argument("--date", default=None,
@@ -142,6 +198,8 @@ def main() -> None:
             "label": label, **s,
             "dist_km": dist_km, "dist_au": dist_km / AU_KM,
             "dvx": dvx, "dvy": dvy, "dvz": dvz, "dv_kms": dv_kms,
+            "el": orbital_elements(s),
+            "xfer": transfer_estimate(orbital_elements(flora), orbital_elements(s)),
         })
 
     md = render_md(epoch_iso, flora, rows)
@@ -204,6 +262,42 @@ def render_md(epoch_iso: str, flora: dict, rows: list[dict]) -> str:
             f"| {r['label']} | {r['dvx']*1000:+.1f} | {r['dvy']*1000:+.1f} | "
             f"{r['dvz']*1000:+.1f} | {r['dv_kms']:.6f} | {r['dv_kms']*1000:.1f} |"
         )
+    L.append("")
+
+    # Transfer analysis
+    flora_el = orbital_elements(flora)
+    L.append("## Analýza přeletu — proč Δv vychází v km/s")
+    L.append("")
+    L.append(f"Oskulační dráha Flory: a = {flora_el['a']/AU_KM:.4f} AU, "
+             f"e = {flora_el['e']:.4f}, i = {flora_el['i_deg']:.2f}°. "
+             "Rozhodující nákladová položka je **vzájemný sklon rovin drah** "
+             "(kombinace rozdílu sklonu i výstupného uzlu): otočení roviny při "
+             "orbitální rychlosti ~17–19 km/s stojí `2·v·sin(Δi/2)`. Tento "
+             "rozdíl nelze odstranit fázováním (čekáním na výhodnou polohu) — "
+             "je to vlastnost drah, ne okamžiku.")
+    L.append("")
+    L.append("| těleso | a [AU] | e | i [°] | vzáj. sklon [°] | Δv roviny [km/s] | Δv v rovině [m/s] | odhad přeletu¹ [km/s] | okamžitý \\|Δv\\| [km/s] |")
+    L.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for r in rows:
+        el, xf = r["el"], r["xfer"]
+        L.append(
+            f"| {r['label']} | {el['a']/AU_KM:.4f} | {el['e']:.4f} | {el['i_deg']:.2f} | "
+            f"{xf['i_mut_deg']:.2f} | {xf['dv_plane']:.3f} | {xf['dv_inplane']*1000:.0f} | "
+            f"{xf['dv_total']:.2f} | {r['dv_kms']:.3f} |"
+        )
+    L.append("")
+    L.append("¹ změna roviny u aféru + Hohmann mezi velkými poloosami + únik z Flory "
+             f"({V_ESC_FLORA_KMS*1000:.0f} m/s); impulzní odhad nezávislý na fázi drah. "
+             "Zanedbává sladění excentricity (u Gerardfaure významné) a zachycení "
+             "u cílového tělesa (~m/s) — jde o dolní odhad. Tam, kde okamžitý |Δv| "
+             "vychází výrazně výš než odhad přeletu (Gerardfaure, Elenacuoghi), "
+             "rozdíl způsobuje aktuální fáze drah a dá se zlevnit načasováním; "
+             "složka roviny (Ulyanov) se načasovat nedá.")
+    L.append("")
+    L.append("**Závěr pro herní model:** skutečná cena rendezvous mezi tělesy rodiny "
+             "Flora je řádově **0,5–4 km/s**, nikoli fixních 150 m/s — trasa se musí "
+             "platit **postupným vyrovnáváním rychlostí po segmentech** "
+             "(`|v_cíl − v_aktuální|`), viz `app/DESIGN.md` §5.2 a `db_design.md` §11.3.")
     L.append("")
 
     # Per-body state vectors

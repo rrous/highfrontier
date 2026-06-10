@@ -344,6 +344,13 @@ prostoru (`x_pos`, `y_pos`, `z_pos` v m/s — `db_design.md` §9.1, ETL
 - **Delta-v manévru** — vektorový rozdíl rychlostí, viz `design_gamer_UX.md` §2.2.
   Vzorec `Δv = |v_out − v_in|` platí; nově se počítá ve **skutečných m/s**, ne
   v normalizovaných jednotkách délky 1.
+- **Cena zastávky = postupné vyrovnání rychlostí.** Rendezvous u tělesa stojí
+  skutečný vektorový rozdíl rychlostí `|v_cíl − v_aktuální|` daného segmentu;
+  trasa se platí **postupně po segmentech**, žádný fixní rozpočet na zastávku.
+  Ověřená škála (JPL Horizons, `docs/horizons_verification.md`): sousedé
+  v rodině Flora stojí **0,5–4 km/s**, dominuje rozdíl rovin drah (složka Z,
+  `2·v·sin(Δi/2)` při ~18 km/s) — ten nelze odstranit načasováním. Dřívější
+  předpoklad fixního zbytkového manévru 150 m/s byl 10–20× podhodnocený.
 - **Tsiolkovského rovnice** — `fuel_used = (M_dry + W) · (1 − exp(−Δv / Ve))`.
   `Ve` (výtoková rychlost motoru) v m/s — reálná hodnota podle typu motoru, ne
   herní konstanta 21.
@@ -368,7 +375,7 @@ Konkrétní technický dluh k odstranění (`db_design.md` §9.2 bod 3,
 | Konstanta / výpočet | Stav v prototypu | Cílový stav |
 |---|---|---|
 | `SPEED` | procentní prostor mapy | reálná cestovní rychlost (m/s) |
-| `DV_STOP`, `DV_RETURN` | herní konstanty v % prostoru | odvozené z reálného delta-v v m/s |
+| `DV_STOP`, `DV_RETURN` | herní konstanty v % prostoru | zrušit fixní rozpočet — cena zastávky/návratu = skutečné vyrovnání rychlostí `\|v_cíl − v_aktuální\|` segmentu v m/s (§5.2; ověřeno proti JPL Horizons, `docs/horizons_verification.md`) |
 | `Ve` | default 21 (bezrozměrné) | výtoková rychlost motoru v m/s |
 | délka trasy, čas | % prostoru | reálná škála |
 | `dvFlyby` | OK (invariantní) | beze změny |
@@ -577,7 +584,7 @@ datového modelu (napojený na `db_design.md`), až k ní vývoj dojde.
 | # | Otázka | Souvislost |
 |---|---|---|
 | OQ-1 | ~~Svelte vs. React~~ — **rozhodnuto: Svelte** | §3.2, krok 1 |
-| OQ-2 | Balanc reálné fyziky — `SPEED`, `Ve`, rozpočty delta-v. Implementace použije fyzikálně věrohodné reálné defaulty (m/s), zdokumentované u konstant a označené k pozdějšímu doladění | §5.4, krok 4 |
+| OQ-2 | Balanc reálné fyziky — `SPEED`, `Ve`, rozpočty delta-v. Škála Δv ověřena proti JPL Horizons (2026-06, `docs/horizons_verification.md`): rendezvous v rodině Flora 0,5–4 km/s → cena zastávky se počítá jako postupné vyrovnání rychlostí po segmentech (§5.2), ne fixní konstantou. Zbývá doladit `SPEED`, `Ve` a kapacitu nádrže na tuto škálu | §5.4, krok 4 |
 | OQ-3 | Rozsah vzdělávací vrstvy na mobilu vs. PC | §7 |
 | OQ-4 | Výběr image modelu pro generování průletů (Imagen / DALL·E / SD) + rozsah pipeline (kolik těles, jak často, schvalovací proces) | §8.2 |
 | OQ-5 | Struktura persistentní vrstvy pro dávkové sdílení katalogů | §4.4 |
