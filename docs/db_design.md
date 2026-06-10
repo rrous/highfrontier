@@ -438,7 +438,11 @@ Hráč se postupně naučí:
 3. **Konstanty ceny trasy v klientovi.** `SPEED`, `DV_STOP`, `DV_RETURN`,
    `fuelUsed` v route planneru počítají v procentním prostoru mapy — po přechodu
    na fyzické souřadnice (km) z Keplerovy propagace je třeba je přeladit na
-   reálnou škálu delta-v a vzdáleností (herní balance).
+   reálnou škálu delta-v a vzdáleností (herní balance). **Rozhodnuto (2026-06):**
+   fixní `DV_STOP` se ruší — cena zastávky je skutečné vyrovnání rychlostí
+   `|v_cíl − v_aktuální|`, placené postupně po segmentech trasy (§11.3). Reálnou
+   škálu (0,5–4 km/s mezi tělesy rodiny Flora, dominuje rozdíl rovin drah)
+   ověřuje `docs/horizons_verification.md` proti JPL Horizons.
 
 4. **Filtrovatelnost rare finds.** Pokud má hra umět dotaz „najdi tělesa
    s nálezem X", samotný textový `special` nestačí — bude potřeba indexovaná
@@ -627,6 +631,13 @@ dv_eff    = |v_tang| + max(0, v_radial)   # efektivní Δv pro rendezvous
 | Těleso se vzdaluje | > 0 | Drahé — musíš dohnat |
 | Těleso letí kolmo | ≈ 0 | Boční manévr — středně drahé |
 
+Tento výpočet je zároveň **základ ceny trasy** (2026-06): hráč platí postupné
+vyrovnávání rychlostí po segmentech — cena zastávky u tělesa = `|dv|` (resp.
+`dv_eff`) vůči předchozímu tělesu na trase, žádný fixní rozpočet. Ověřená škála
+proti JPL Horizons (`docs/horizons_verification.md`): mezi tělesy rodiny Flora
+typicky **0,5–4 km/s**; dominuje rozdíl rovin drah (složka mimo ekliptiku),
+který nelze zlevnit načasováním — na rozdíl od fázové složky.
+
 ### 11.4 2D projekce — inklinace
 
 Flora region: i < 9° → Z složka max 15 % chyba při X-Y projekci. PoC ignoruje Z; full game: Z jako třetí dimenze pohybu.
@@ -634,13 +645,18 @@ Flora region: i < 9° → Z složka max 15 % chyba při X-Y projekci. PoC ignoru
 ### 11.5 Vizuální vektory v mapě
 
 ```
-● Zelená šipka   dv_eff < 80 m/s     "přibližující / levné"
-● Žlutá šipka    80–300 m/s          "střední"
-● Červená šipka  > 300 m/s           "rychlé, drahé"
+● Zelená šipka   dv_eff < 500 m/s    "blízké dráhy / levné"
+● Žlutá šipka    500–2000 m/s        "střední"
+● Červená šipka  > 2000 m/s          "jiná rovina dráhy — drahé"
 
 Směr: projekce dv do 2D mapy
 Délka: log(dv_eff)
 ```
+
+Prahy překalibrovány (2026-06) podle ověření proti JPL Horizons
+(`docs/horizons_verification.md`) — původní 80/300 m/s odpovídaly procentnímu
+prostoru mapy, reálné `dv_eff` mezi tělesy rodiny vychází v km/s. Doladit při
+balancování.
 
 ### 11.6 Snapshoty a pohyb base
 
