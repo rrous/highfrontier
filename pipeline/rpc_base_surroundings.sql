@@ -1,7 +1,14 @@
 -- ============================================================================
--- base_surroundings — proximity query keyed by a named base.
+-- base_surroundings — proximity query keyed by a named base.  *** LEGACY ***
 -- Run once in the Supabase SQL editor. Idempotent (CREATE OR REPLACE).
 -- ============================================================================
+--
+-- ⚠ LEGACY: operates in proper-element velocity space and reports the
+-- Euclidean distance there as `delta_v`. The current model (db_design.md
+-- §11.3, verified in docs/horizons_verification.md) uses physical XYZ
+-- positions and component-wise deltaV from Kepler propagation — served by
+-- `base_surroundings_v2` (rpc_base_surroundings_v2.sql). Kept only until
+-- the client migrates; do not build new features on this RPC.
 --
 -- Returns asteroids in the surroundings of the given base, ordered by 3D
 -- distance (delta-v) in proper-element velocity space. The base's own

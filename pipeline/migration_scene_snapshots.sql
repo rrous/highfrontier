@@ -26,10 +26,18 @@
 --     "dy_km":         <numeric>,
 --     "dz_km":         <numeric>,
 --     "d_km":          <numeric>,   -- |r_target - r_base|  (km)
---     "dvx_kms":       <numeric>,   -- v_target - v_base
+--     "dvx_kms":       <numeric>,   -- v_target - v_base (deltaV XYZ)
 --     "dvy_kms":       <numeric>,
---     "dvz_kms":       <numeric>
---   }
+--     "dvz_kms":       <numeric>,
+--     "dv_kms":        <numeric>,   -- |v_target - v_base|  (km/s)
+--     "v_radial_kms":  <numeric>,   -- dv projected on base→target line (+ = receding)
+--     "v_tang_kms":    <numeric>,   -- tangential remainder
+--     "dv_eff_kms":    <numeric>    -- |v_tang| + max(0, v_radial) — per-segment
+--   }                               --   route cost (db_design.md §11.3)
+--
+-- Rows written before 2026-06 lack the last four derived fields; consumers
+-- must either recompute them from the dv*/d* components or read the scene
+-- through `base_surroundings_v2`, which falls back to computing them in SQL.
 --
 -- The base's own asteroid is included with d_km = 0 so the client can render
 -- it without a separate lookup.

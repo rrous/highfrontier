@@ -228,6 +228,22 @@ def build_snapshot(bodies: list[dict], base_id_in_bodies: int, target_jd: float)
         dy = y - by
         dz = z - bz
         d = math.sqrt(dx * dx + dy * dy + dz * dz)
+        dvx = vx - bvx
+        dvy = vy - bvy
+        dvz = vz - bvz
+        dv = math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz)
+
+        # Relative-motion decomposition (db_design.md §11.3): radial component
+        # along the base→target line (+ = receding), tangential remainder, and
+        # the effective rendezvous cost dv_eff = |v_tang| + max(0, v_radial).
+        # This is the per-segment route cost replacing the fixed DV_STOP.
+        if d > 0.0:
+            v_radial = (dvx * dx + dvy * dy + dvz * dz) / d
+        else:
+            v_radial = 0.0   # the base's own asteroid
+        v_tang = math.sqrt(max(0.0, dv * dv - v_radial * v_radial))
+        dv_eff = v_tang + max(0.0, v_radial)
+
         items.append({
             "id":            entry["row"]["id"],
             "name":          entry["row"]["name"],
@@ -242,9 +258,13 @@ def build_snapshot(bodies: list[dict], base_id_in_bodies: int, target_jd: float)
             "dy_km":         dy / 1000.0,
             "dz_km":         dz / 1000.0,
             "d_km":          d  / 1000.0,
-            "dvx_kms":       (vx - bvx) / 1000.0,
-            "dvy_kms":       (vy - bvy) / 1000.0,
-            "dvz_kms":       (vz - bvz) / 1000.0,
+            "dvx_kms":       dvx / 1000.0,
+            "dvy_kms":       dvy / 1000.0,
+            "dvz_kms":       dvz / 1000.0,
+            "dv_kms":        dv / 1000.0,
+            "v_radial_kms":  v_radial / 1000.0,
+            "v_tang_kms":    v_tang / 1000.0,
+            "dv_eff_kms":    dv_eff / 1000.0,
         })
 
     items.sort(key=lambda it: it["d_km"])
