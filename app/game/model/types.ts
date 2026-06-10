@@ -17,17 +17,18 @@ export interface Asteroid {
   x: number;   // map % (0–100)
   y: number;   // map % (0–100)
   r: number;   // display radius (px)
-  vx: number;  // proper-element velocity x (m/s) — §db_design §9.1
-  vy: number;  // proper-element velocity y (m/s)
-  vz: number;  // proper-element velocity z (m/s)
+  vx: number;  // heliocentric velocity x (m/s) — Kepler-propagated, db_design §9.1
+  vy: number;  // heliocentric velocity y (m/s)
+  vz: number;  // heliocentric velocity z (m/s)
+  dKm: number; // physical distance from base (km) — scene_snapshots d_km
 }
 
 export interface Base {
   x: number;   // map % — always 50
   y: number;   // map % — always 50
-  vx: number;  // m/s
-  vy: number;  // m/s
-  vz: number;  // m/s
+  vx: number;  // heliocentric velocity (m/s)
+  vy: number;  // heliocentric velocity (m/s)
+  vz: number;  // heliocentric velocity (m/s)
 }
 
 export type RouteMode = 'stop' | 'flyby';
