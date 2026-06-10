@@ -141,7 +141,7 @@ def main() -> None:
         rows.append({
             "label": label, **s,
             "dist_km": dist_km, "dist_au": dist_km / AU_KM,
-            "dv_kms": dv_kms,
+            "dvx": dvx, "dvy": dvy, "dvz": dvz, "dv_kms": dv_kms,
         })
 
     md = render_md(epoch_iso, flora, rows)
@@ -188,6 +188,21 @@ def render_md(epoch_iso: str, flora: dict, rows: list[dict]) -> str:
             f"| {r['label']} | {r['record']} | {r['resolved']} | "
             f"{r['dist_au']:.6f} | {r['dist_km']:.3e} | "
             f"{r['dv_kms']:.6f} | {r['dv_kms']*1000:.1f} |"
+        )
+    L.append("")
+
+    # Δv broken into components
+    L.append("## Rozklad Δv po složkách (těleso − Flora)")
+    L.append("")
+    L.append("> Konvence `těleso − Flora` shodná s polem `dv*_kms` ve `snapshot_daily.py` "
+             "(`v_target − v_base`). Velikost `|Δv|` je na znaménku nezávislá.")
+    L.append("")
+    L.append("| těleso | ΔVX [m/s] | ΔVY [m/s] | ΔVZ [m/s] | \\|Δv\\| [km/s] | \\|Δv\\| [m/s] |")
+    L.append("|---|---:|---:|---:|---:|---:|")
+    for r in rows:
+        L.append(
+            f"| {r['label']} | {r['dvx']*1000:+.1f} | {r['dvy']*1000:+.1f} | "
+            f"{r['dvz']*1000:+.1f} | {r['dv_kms']:.6f} | {r['dv_kms']*1000:.1f} |"
         )
     L.append("")
 

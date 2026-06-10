@@ -1,7 +1,7 @@
 # Ověření poloh a Δv proti JPL Horizons
 
 - **Epocha:** 2026-06-04 00:00 UT
-- **Vygenerováno:** 2026-06-04 14:21 UTC
+- **Vygenerováno:** 2026-06-10 09:26 UTC
 - **Zdroj:** JPL Horizons API (`EPHEM_TYPE=VECTORS`)
 - **Rámec:** heliocentrický (Slunce, `500@10`), ekliptika J2000, jednotky km / km·s⁻¹
 - **Referenční těleso:** 8 Flora (A847 UA) (rec #8)
@@ -24,6 +24,17 @@
 | Begzhigitova | 17102 | 17102 Begzhigitova (1999 JB41) | 0.087077 | 1.303e+07 | 1.050470 | 1050.5 |
 | Gerardfaure | 8297 | 8297 Gerardfaure (1993 QJ4) | 0.091833 | 1.374e+07 | 4.045909 | 4045.9 |
 | Elenacuoghi | 58580 | 58580 Elenacuoghi (1997 SW2) | 0.143522 | 2.147e+07 | 2.183664 | 2183.7 |
+
+## Rozklad Δv po složkách (těleso − Flora)
+
+> Konvence `těleso − Flora` shodná s polem `dv*_kms` ve `snapshot_daily.py` (`v_target − v_base`). Velikost `|Δv|` je na znaménku nezávislá.
+
+| těleso | ΔVX [m/s] | ΔVY [m/s] | ΔVZ [m/s] | \|Δv\| [km/s] | \|Δv\| [m/s] |
+|---|---:|---:|---:|---:|---:|
+| Ulyanov | -103.5 | -481.0 | +2774.8 | 2.818083 | 2818.1 |
+| Begzhigitova | +322.2 | -153.2 | +988.0 | 1.050470 | 1050.5 |
+| Gerardfaure | +701.4 | -3673.4 | +1543.9 | 4.045909 | 4045.9 |
+| Elenacuoghi | -74.2 | -2154.6 | -347.6 | 2.183664 | 2183.7 |
 
 ## Stavové vektory cílových těles
 
